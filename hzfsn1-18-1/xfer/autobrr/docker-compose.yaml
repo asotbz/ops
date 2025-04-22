@@ -3,7 +3,7 @@ services:
     # https://github.com/autobrr/autobrr/pkgs/container/autobrr
     image: ghcr.io/autobrr/autobrr:v1.60
     container_name: autobrr
-    user: ${XFER_UID}:${XFER_GID}
+    user: ${DELUGE_UID}:${DELUGE_GID}
     security_opt:
       - no-new-privileges=true
     restart: unless-stopped
