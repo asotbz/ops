@@ -2,7 +2,6 @@ services:
   portainer:
     image: portainer/agent:2.27.4
     container_name: portainer-agent
-    user: ${COMMON_UID}:${COMMON_GID}
     group_add:
       - ${DOCKER_GID}
     security_opt:
