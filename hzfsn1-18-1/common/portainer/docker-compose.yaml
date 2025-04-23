@@ -45,6 +45,10 @@ services:
             dst_ports:
               - 443
               - 80
+          # Portainer Agent
+          - proto: tcp
+            dst_ports:
+              - 9001
           # reverse proxy
           - network: common_backend
             container: traefik
