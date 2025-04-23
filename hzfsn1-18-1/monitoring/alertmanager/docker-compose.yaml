@@ -21,12 +21,12 @@ services:
       traefik.enable: true
 
       # Listen on http, but redirect all requests to https
-      traefik.http.routers.alertmanager-http.rule: Host(`alertmanager-hzfsn1-18-1.${DOMAIN}`)
+      traefik.http.routers.alertmanager-http.rule: Host(`alertmanager.${DOMAIN}`)
       traefik.http.routers.alertmanager-http.entrypoints: http
       traefik.http.routers.alertmanager-http.middlewares: redirect-https
 
       # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.alertmanager-https.rule: Host(`alertmanager-hzfsn1-18-1.${DOMAIN}`)
+      traefik.http.routers.alertmanager-https.rule: Host(`alertmanager.${DOMAIN}`)
       traefik.http.routers.alertmanager-https.entrypoints: https
       traefik.http.routers.alertmanager-https.tls: true
       traefik.http.routers.alertmanager-https.tls.certresolver: ${CERT_RESOLVER}
