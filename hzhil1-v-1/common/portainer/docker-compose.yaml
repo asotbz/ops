@@ -1,7 +1,7 @@
 services:
   portainer:
-    image: portainer/portainer-ee:2.27.4
-    container_name: portainer
+    image: portainer/agent:2.27.4
+    container_name: portainer-agent
     user: ${COMMON_UID}:${COMMON_GID}
     group_add:
       - ${DOCKER_GID}
@@ -15,26 +15,12 @@ services:
       logging_jobname: containerlogs
       stackname: common
 
-      traefik.enable: true
-
-      # Listen on http, but redirect all requests to https
-      traefik.http.routers.portainer-http.rule: Host(`pio-hzfsn1-18-1.${DOMAIN}`)
-      traefik.http.routers.portainer-http.entrypoints: http
-      traefik.http.routers.portainer-http.middlewares: redirect-https
-
-      # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.portainer-https.rule: Host(`pio-hzfsn1-18-1.${DOMAIN}`)
-      traefik.http.routers.portainer-https.entrypoints: https
-      traefik.http.routers.portainer-https.tls: true
-      traefik.http.routers.portainer-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.portainer-https.service: portainer
-      traefik.http.routers.portainer-https.middlewares: crowdsec-bouncer
-
-      traefik.http.services.portainer.loadbalancer.server.port: 9000
-
       # network policy
       whalewall.enabled: true
       whalewall.rules: |
+        mapped_ports:
+          external:
+            allow: true
         output:
           # DNS
           - proto: udp
@@ -45,20 +31,17 @@ services:
             dst_ports:
               - 443
               - 80
-          # reverse proxy
-          - network: common_backend
-            container: traefik
     logging:
       driver: json-file
       options:
         max-size: 1m
         max-file: 1
         tag: "{{.Name}}"
+    ports:
+      - 9001:9001
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+      - /var/portainer_unpack:/var/portainer_unpack
     networks:
       - backend
-
-volumes:
-  portainer_data:
