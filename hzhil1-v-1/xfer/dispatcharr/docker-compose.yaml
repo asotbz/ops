@@ -2,7 +2,6 @@ services:
   dispatcharr:
     # https://github.com/Dispatcharr/Dispatcharr
     image: ghcr.io/dispatcharr/dispatcharr:0.3.3
-    user: ${XFER_UID}:${XFER_GID}
     security_opt:
       - no-new-privileges=true
     container_name: dispatcharr
