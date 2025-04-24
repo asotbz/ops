@@ -1,0 +1,89 @@
+services:
+  streammaster:
+    # https://hub.docker.com/r/senexcrenshaw/streammaster/tags
+    # https://github.com/SenexCrenshaw/StreamMaster
+    image: sergeantpanda/streammaster:1.0.1.7
+    container_name: streammaster
+    restart: unless-stopped
+    environment:
+      - PUID=${XFER_UID}
+      - PGID=${XFER_GID}
+      - POSTGRES_USER_FILE=/var/run/secrets/streammaster-postgres-user
+      - POSTGRES_PASSWORD_FILE=/var/run/secrets/streammaster-postgres-password
+    secrets:
+      - streammaster-postgres-user
+      - streammaster-postgres-password
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - streammaster_config:/config
+    network_mode: "service:gluetun"
+
+  streammaster-watchdog:
+    image: sergeantpanda/streammasterwatchdog:1.1.3
+    container_name: streammaster-watchdog
+    user: ${XFER_UID}:${XFER_GID}
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      - SERVER_URL=http://streammaster:7095
+      - USERNAME=${STREAMMASTER_USERNAME}
+      - PASSWORD=${STREAMMASTER_PASSWORD}
+      - TZ=${TZ}
+    restart: unless-stopped
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # streammaster api
+          - network: common_backend
+            container: streammaster
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    networks:
+      - backend
+
+secrets:
+  streammaster-postgres-user:
+    file: ./postgres-user.txt
+  streammaster-postgres-password:
+    file: ./postgres-password.txt
+
+volumes:
+  streammaster_config:
