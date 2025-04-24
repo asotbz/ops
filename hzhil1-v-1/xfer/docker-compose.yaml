@@ -49,7 +49,7 @@ services:
       traefik.http.routers.prowlarr-https.middlewares: crowdsec-bouncer
       
       # nzbhydra2
-      traefik.http.services.nzbhydra2.loadbalancer.server.port: 7095
+      traefik.http.services.nzbhydra2.loadbalancer.server.port: 5076
       # prowlarr
       traefik.http.services.prowlarr.loadbalancer.server.port: 9696
 
