@@ -31,6 +31,10 @@ services:
       traefik.http.routers.prowlarr-http.rule: Host(`plr.${DOMAIN}`)
       traefik.http.routers.prowlarr-http.entrypoints: http
       traefik.http.routers.prowlarr-http.middlewares: redirect-https
+      # dispatcharr
+      traefik.http.routers.dispatcharr-http.rule: Host(`stm.${DOMAIN}`)
+      traefik.http.routers.dispatcharr-http.entrypoints: http
+      traefik.http.routers.dispatcharr-http.middlewares: redirect-https
 
       # Direct all https requests to the service, checking with crowdsec first
       # nzbhydra2
@@ -47,11 +51,20 @@ services:
       traefik.http.routers.prowlarr-https.tls.certresolver: ${CERT_RESOLVER}
       traefik.http.routers.prowlarr-https.service: prowlarr
       traefik.http.routers.prowlarr-https.middlewares: crowdsec-bouncer
-      
+      # dispatcharr
+      traefik.http.routers.dispatcharr-https.rule: Host(`stm.${DOMAIN}`)
+      traefik.http.routers.dispatcharr-https.entrypoints: https
+      traefik.http.routers.dispatcharr-https.tls: true
+      traefik.http.routers.dispatcharr-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.dispatcharr-https.service: dispatcharr
+      traefik.http.routers.dispatcharr-https.middlewares: crowdsec-bouncer
+
       # nzbhydra2
       traefik.http.services.nzbhydra2.loadbalancer.server.port: 5076
       # prowlarr
       traefik.http.services.prowlarr.loadbalancer.server.port: 9696
+      # dispatcharr
+      traefik.http.services.dispatcharr.loadbalancer.server.port: 9191
 
     logging:
       driver: json-file
