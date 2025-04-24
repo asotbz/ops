@@ -42,7 +42,7 @@ services:
         tag: "{{.Name}}"
     volumes:
       - prowlarr_config:/config
-    network-mode: "service:gluetun"
+    network_mode: "service:gluetun"
 
 volumes:
   prowlarr_config:
