@@ -18,7 +18,7 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: xfer
 
       traefik.enable: true
 
