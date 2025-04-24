@@ -1,0 +1,49 @@
+services:
+  nzbhydra2:
+    # https://github.com/linuxserver/docker-nzbhydra2/pkgs/container/nzbhydra2
+    image: lscr.io/linuxserver/nzbhydra2:7.12.3
+    container_name: nzbhydra2
+    restart: unless-stopped
+    environment:
+      # https://docs.linuxserver.io/images/docker-nzbhydra2/#environment-variables-e
+      - PUID=${XFER_UID}
+      - PGID=${XFER_GID}
+      - TZ=${TZ}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      # traefik: see gluetun container
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - nzbhydra2_config:/config
+      - nzbhydra2_downloads:/downloads
+    network_mode: "service:gluetun"
+
+volumes:
+  nzbhydra2_config:
+  nzbhydra2_downloads:

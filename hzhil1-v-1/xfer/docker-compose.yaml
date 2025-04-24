@@ -1,0 +1,74 @@
+# XFER STACK
+## Per-stack instances of services (e.g. for backups) are declared here.
+services:
+  gluetun:
+    image: qmcgaw/gluetun:v3.40.0
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=${GLUETUN_PROVIDER}
+      - VPN_TYPE=${GLUETUN_TYPE}
+      - WIREGUARD_PRIVATE_KEY=${GLUETUN_WG_PRIVATE_KEY}
+      - SERVER_COUNTRIES=${GLUETUN_COUNTRIES}
+      - SERVER_CITIES=${GLUETUN_CITIES}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: media
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      # nzbhydra2
+      traefik.http.routers.nzbhydra2-http.rule: Host(`hyd.${DOMAIN}`)
+      traefik.http.routers.nzbhydra2-http.entrypoints: http
+      traefik.http.routers.nzbhydra2-http.middlewares: redirect-https
+      # prowlarr
+      traefik.http.routers.prowlarr-http.rule: Host(`plr.${DOMAIN}`)
+      traefik.http.routers.prowlarr-http.entrypoints: http
+      traefik.http.routers.prowlarr-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      # nzbhydra2
+      traefik.http.routers.nzbhydra2-https.rule: Host(`hyd.${DOMAIN}`)
+      traefik.http.routers.nzbhydra2-https.entrypoints: https
+      traefik.http.routers.nzbhydra2-https.tls: true
+      traefik.http.routers.nzbhydra2-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.nzbhydra2-https.service: nzbhydra2
+      traefik.http.routers.nzbhydra2-https.middlewares: crowdsec-bouncer
+      # prowlarr
+      traefik.http.routers.prowlarr-https.rule: Host(`plr.${DOMAIN}`)
+      traefik.http.routers.prowlarr-https.entrypoints: https
+      traefik.http.routers.prowlarr-https.tls: true
+      traefik.http.routers.prowlarr-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.prowlarr-https.service: prowlarr
+      traefik.http.routers.prowlarr-https.middlewares: crowdsec-bouncer
+      
+      # nzbhydra2
+      traefik.http.services.nzbhydra2.loadbalancer.server.port: 7095
+      # prowlarr
+      traefik.http.services.prowlarr.loadbalancer.server.port: 9696
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    networks:
+      - backend
+
+# When referring to a network called 'backend', we mean the common stack's backend network
+networks:
+  backend:
+    name: common_backend
+    external: true
+
+# Remaining services in the stack have their own Compose configuration. 
+include:
+  - ./nzbhydra2/docker-compose.yaml
+  - ./prowlarr/docker-compose.yaml
