@@ -16,7 +16,20 @@ services:
       logging_jobname: containerlogs
       stackname: xfer
 
-      # traefik: see gluetun container
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.prowlarr-http.rule: Host(`plr.${DOMAIN}`)
+      traefik.http.routers.prowlarr-http.entrypoints: http
+      traefik.http.routers.prowlarr-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.prowlarr-https.rule: Host(`plr.${DOMAIN}`)
+      traefik.http.routers.prowlarr-https.entrypoints: https
+      traefik.http.routers.prowlarr-https.tls: true
+      traefik.http.routers.prowlarr-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.prowlarr-https.service: prowlarr
+      traefik.http.routers.prowlarr-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.prowlarr.loadbalancer.server.port: 9696
 
       # network policy
       whalewall.enabled: true
@@ -42,7 +55,8 @@ services:
         tag: "{{.Name}}"
     volumes:
       - prowlarr_config:/config
-    network_mode: "service:gluetun"
+    networks:
+      - backend
 
 volumes:
   prowlarr_config:

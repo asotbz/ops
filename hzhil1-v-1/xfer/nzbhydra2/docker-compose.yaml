@@ -15,7 +15,20 @@ services:
       logging_jobname: containerlogs
       stackname: xfer
 
-      # traefik: see gluetun container
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.nzbhydra2-http.rule: Host(`hyd.${DOMAIN}`)
+      traefik.http.routers.nzbhydra2-http.entrypoints: http
+      traefik.http.routers.nzbhydra2-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.nzbhydra2-https.rule: Host(`hyd.${DOMAIN}`)
+      traefik.http.routers.nzbhydra2-https.entrypoints: https
+      traefik.http.routers.nzbhydra2-https.tls: true
+      traefik.http.routers.nzbhydra2-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.nzbhydra2-https.service: nzbhydra2
+      traefik.http.routers.nzbhydra2-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.nzbhydra2.loadbalancer.server.port: 5076
 
       # network policy
       whalewall.enabled: true
@@ -42,7 +55,8 @@ services:
     volumes:
       - nzbhydra2_config:/config
       - nzbhydra2_downloads:/downloads
-    network_mode: "service:gluetun"
+    networks:
+      - backend
 
 volumes:
   nzbhydra2_config:
