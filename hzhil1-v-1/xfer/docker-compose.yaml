@@ -38,7 +38,7 @@ services:
       traefik.http.routers.streammaster-https.middlewares: crowdsec-bouncer
 
       # streammaster
-      traefik.http.services.streammaster.loadbalancer.server.port: 9191
+      traefik.http.services.streammaster.loadbalancer.server.port: 7095
 
     logging:
       driver: json-file
