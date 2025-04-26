@@ -4,7 +4,7 @@ services:
     # https://github.com/outline/outline
     image: docker.getoutline.com/outlinewiki/outline:0.83.0
     container_name: outline
-    restart: unless_stopped
+    restart: unless-stopped
     env_file: ./outline.env
     labels:
       # logs collection
