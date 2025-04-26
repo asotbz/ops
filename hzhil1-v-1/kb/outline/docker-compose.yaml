@@ -1,0 +1,66 @@
+services:
+  outline:
+    # https://docs.getoutline.com/s/hosting/doc/docker-7pfeLP5a8t
+    # https://github.com/outline/outline
+    image: docker.getoutline.com/outlinewiki/outline:0.83.0
+    container_name: outline
+    restart: unless_stopped
+    env_file: ./outline.env
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: kb
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.outline-http.rule: Host(`oln.${DOMAIN}`)
+      traefik.http.routers.outline-http.entrypoints: http
+      traefik.http.routers.outline-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.outline-https.rule: Host(`oln.${DOMAIN}`)
+      traefik.http.routers.outline-https.entrypoints: https
+      traefik.http.routers.outline-https.tls: true
+      traefik.http.routers.outline-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.outline-https.service: outline
+      traefik.http.routers.outline-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.outline.loadbalancer.server.port: 3000
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+          # database
+          - network: common_backend
+            container: postgres
+          # cache
+          - network: common_backend
+            container: redis
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - outline_data:/var/lib/outline/data
+    networks:
+      - backend
+
+volumes:
+  outline_data:

@@ -1,0 +1,45 @@
+services:
+  postgres:
+    # https://github.com/docker-library/docs/blob/master/postgres/README.md
+    # https://hub.docker.com/_/postgres/
+    image: postgres:17.4
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER_FILE=/var/run/secrets/outline-postgres-user
+      - POSTGRES_PASSWORD_FILE=/var/run/secrets/outline-postgres-password
+    secrets:
+      - outline-postgres-user
+      - outline-postgres-password
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: kb
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # outline database
+          - network: common_backend
+            container: outline
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+secrets:
+  outline-postgres-user:
+    file: ./outline-postgres-user.txt
+  outline-postgres-password:
+    file: ./outline-postgres-password.txt
+
+volumes:
+  postgres_data:
