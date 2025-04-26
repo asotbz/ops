@@ -9,5 +9,6 @@ networks:
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
+  - ./outline/docker-compose.yaml
   - ./postgres/docker-compose.yaml
   - ./redis/docker-compose.yaml
