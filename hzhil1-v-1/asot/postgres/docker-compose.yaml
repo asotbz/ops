@@ -5,7 +5,9 @@ services:
     image: postgres:16.9-alpine
     container_name: postgresql
     restart: unless-stopped
-    env_file: ./postgres.env
+    env_file: 
+      - ./postgres.env
+      - ../.env
     security_opt:
       - no-new-privileges=true
     healthcheck:
@@ -35,4 +37,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  postgresql_data:

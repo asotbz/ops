@@ -5,7 +5,9 @@ services:
     image: docker.getoutline.com/outlinewiki/outline:0.83.0
     container_name: outline
     restart: unless-stopped
-    env_file: ./outline.env
+    env_file: 
+      - ./outline.env
+      - ../.env
     user: ${ASOT_UID}:${ASOT_GID}
     labels:
       # logs collection

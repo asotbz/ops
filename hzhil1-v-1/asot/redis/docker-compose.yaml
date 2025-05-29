@@ -6,6 +6,7 @@ services:
     image: redis:7.4.3-alpine
     container_name: redis
     restart: unless-stopped
+    user: ${ASOT_UID}:${ASOT_GID}
     command: --save 60 1 --loglevel warning
     security_opt:
       - no-new-privileges=true
@@ -36,13 +37,12 @@ services:
     image: oliver006/redis_exporter:v1.71.0
     container_name: redis-exporter
     restart: unless-stopped
-    user: ${AUTH_UID}:${AUTH_GID}
+    user: ${ASOT_UID}:${ASOT_GID}
     security_opt:
       - no-new-privileges=true
     environment:
       # https://github.com/oliver006/redis_exporter?tab=readme-ov-file#command-line-flags
       - REDIS_ADDR=redis://redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
     labels:
       # logs collection
       logging: promtail

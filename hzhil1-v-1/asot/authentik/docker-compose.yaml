@@ -5,7 +5,9 @@ services:
     restart: unless-stopped
     command: server
     user: ${ASOT_UID}:${ASOT_GID}
-    env_file: ./authentik.env
+    env_file: 
+      - ./authentik.env
+      - ../.env
     security_opt:
       - no-new-privileges=true
     environment:
