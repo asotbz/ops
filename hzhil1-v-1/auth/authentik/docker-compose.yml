@@ -1,0 +1,80 @@
+services:
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2025.4.1
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: server
+    user: ${AUTH_UID}:${AUTH_GID}
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PASSWORD: ${REDIS_PASSWORD}
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${POSTGRES_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${POSTGRES_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - authentik_media:/media
+      - authentik_templates:/templates
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: auth
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.idp-http.rule: Host(`idp.${DOMAIN}`)
+      traefik.http.routers.idp-http.entrypoints: http
+      traefik.http.routers.idp-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.idp-https.rule: Host(`idp.${DOMAIN}`)
+      traefik.http.routers.idp-https.entrypoints: https
+      traefik.http.routers.idp-https.tls: true
+      traefik.http.routers.idp-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.idp-https.service: cwa
+      traefik.http.routers.idp-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.idp.loadbalancer.server.port: 9000
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    networks:
+      - backend
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2025.4.1
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: worker
+    user: ${AUTH_UID}:${AUTH_GID}
+    group_add:
+      - ${DOCKER_GID}
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_REDIS__PASSWORD: ${REDIS_PASSWORD}
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${POSTGRES_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${POSTGRES_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: auth
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - authentik_media:/media
+      - authentik_certs:/certs
+      - authentik_templates:/templates
+    networks:
+      - backend
