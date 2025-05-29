@@ -5,18 +5,12 @@ services:
     restart: unless-stopped
     command: server
     user: ${ASOT_UID}:${ASOT_GID}
-    env_file: 
-      - ./authentik.env
-      - ../.env
+    env_file: ./authentik.env
     security_opt:
       - no-new-privileges=true
     environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_REDIS__HOST: redis
       AUTHENTIK_POSTGRESQL__HOST: postgresql
-      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER}
-      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
