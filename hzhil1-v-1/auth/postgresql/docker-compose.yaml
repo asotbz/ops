@@ -3,7 +3,7 @@ services:
     image: postgres:16.9-alpine
     container_name: postgresql
     restart: unless-stopped
-    user: ${AUTH_USER}:${AUTH_GID}
+    user: ${AUTH_UID}:${AUTH_GID}
     security_opt:
       - no-new-privileges=true
     healthcheck:

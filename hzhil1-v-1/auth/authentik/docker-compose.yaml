@@ -78,3 +78,8 @@ services:
       - authentik_templates:/templates
     networks:
       - backend
+
+volumes:
+  authentik_media:
+  authentik_certs:
+  authentik_templates:
