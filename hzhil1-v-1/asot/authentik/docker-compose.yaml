@@ -32,7 +32,7 @@ services:
       traefik.http.routers.idp-https.entrypoints: https
       traefik.http.routers.idp-https.tls: true
       traefik.http.routers.idp-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.idp-https.service: cwa
+      traefik.http.routers.idp-https.service: idp
       traefik.http.routers.idp-https.middlewares: crowdsec-bouncer
 
       traefik.http.services.idp.loadbalancer.server.port: 9000
