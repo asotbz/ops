@@ -3,7 +3,6 @@ services:
     image: postgres:16.9-alpine
     container_name: postgresql
     restart: unless-stopped
-    user: ${AUTH_UID}:${AUTH_GID}
     security_opt:
       - no-new-privileges=true
     healthcheck:
@@ -16,11 +15,26 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+      # database1,user1,password1:database2,user2,password2:...
+      - POSTGRES_MULTIPLE_DATABASES="${AUTHENTIK_POSTGRES_DB},${AUTHENTIK_POSTGRES_USER},${AUTHENTIK_POSTGRES_PASSWORD}:${OUTLINE_POSTGRES_DB},${OUTLINE_POSTGRES_USER},${OUTLINE_POSTGRES_PASSWORD}"
     labels:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: auth
+      stackname: asot
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # outline database
+          - network: common_backend
+            container: outline
+          # authentik database
+          - network: common_backend
+            container: authentik_server
+          - network: common_backend
+            container: authentik_worker
     logging:
       driver: json-file
       options:
@@ -29,6 +43,7 @@ services:
         tag: "{{.Name}}"
     volumes:
       - postgresql_data:/var/lib/postgresql/data
+      - ./multidb.sh:/docker-entrypoint-initdb.d/multidb.sh
     networks:
       - backend
 
