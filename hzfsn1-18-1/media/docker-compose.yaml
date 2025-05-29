@@ -1,4 +1,4 @@
-# ASOT STACK
+# MEDIA STACK
 ## Per-stack instances of services (e.g. for backups) are declared here.
 
 # When referring to a network called 'backend', we mean the common stack's backend network
@@ -9,4 +9,4 @@ networks:
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
-  - ./postgresql/docker-compose.yaml
+  - ./cwa/docker-compose.yaml

@@ -1,0 +1,128 @@
+services:
+  calibre-web-automated:
+    # https://github.com/crocodilestick/Calibre-Web-Automated
+    # https://hub.docker.com/r/crocodilestick/calibre-web-automated/tags
+    image: crocodilestick/calibre-web-automated:V3.0.4
+    container_name: calibre-web-automated
+    security_opt:
+      - no-new-privileges=true
+    restart: unless-stopped
+    environment:
+      - PUID=${MEDIA_UID}
+      - PGID=${MEDIA_GID}
+      - TZ=${TZ}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: media
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.cwa-http.rule: Host(`cwa.${DOMAIN}`)
+      traefik.http.routers.cwa-http.entrypoints: http
+      traefik.http.routers.cwa-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.cwa-https.rule: Host(`cwa.${DOMAIN}`)
+      traefik.http.routers.cwa-https.entrypoints: https
+      traefik.http.routers.cwa-https.tls: true
+      traefik.http.routers.cwa-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.cwa-https.service: cwa
+      traefik.http.routers.cwa-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.cwa.loadbalancer.server.port: 8083
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 80
+              - 443
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - calibre-web-automated_config:/config
+      - /mnt/media/ebooks/cwa-book-ingest:/cwa-book-ingest
+      - /mnt/media/ebooks/calibre-library:/calibre-library
+    networks:
+      - backend
+
+  calibre-web-automated-book-downloader:
+    image: ghcr.io/calibrain/calibre-web-automated-book-downloader:20250506
+    container_name: calibre-web-automated-book-downloader
+    security_opt:
+      - no-new-privileges=true
+    restart: unless-stopped
+    environment:
+      - UID=${MEDIA_UID}
+      - GID=${MEDIA_GID}
+      - TZ=${TZ}
+      - AA_DONATOR_KEY=${AA_DONATOR_KEY}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: media
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.cwd-http.rule: Host(`cwd.${DOMAIN}`)
+      traefik.http.routers.cwd-http.entrypoints: http
+      traefik.http.routers.cwd-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.cwd-https.rule: Host(`cwd.${DOMAIN}`)
+      traefik.http.routers.cwd-https.entrypoints: https
+      traefik.http.routers.cwd-https.tls: true
+      traefik.http.routers.cwd-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.cwd-https.service: cwd
+      traefik.http.routers.cwd-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.cwd.loadbalancer.server.port: 8084
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 80
+              - 443
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - /mnt/media/ebooks/cwa-book-ingest:/cwa-book-ingest
+    networks:
+      - backend
+    
+volumes:
+  calibre-web-automated_config:

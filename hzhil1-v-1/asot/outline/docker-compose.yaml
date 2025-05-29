@@ -6,6 +6,7 @@ services:
     container_name: outline
     restart: unless-stopped
     env_file: ./outline.env
+    user: ${ASOT_UID}:${ASOT_GID}
     labels:
       # logs collection
       logging: promtail

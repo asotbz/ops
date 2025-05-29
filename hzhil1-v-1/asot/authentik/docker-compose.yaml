@@ -4,17 +4,17 @@ services:
     container_name: authentik-server
     restart: unless-stopped
     command: server
-    user: ${AUTH_UID}:${AUTH_GID}
+    user: ${ASOT_UID}:${ASOT_GID}
+    env_file: ./authentik.env
     security_opt:
       - no-new-privileges=true
     environment:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_REDIS__HOST: redis
-      AUTHENTIK_REDIS__PASSWORD: ${REDIS_PASSWORD}
-      AUTHENTIK_POSTGRESQL__HOST: postgresql
-      AUTHENTIK_POSTGRESQL__USER: ${POSTGRES_USER}
-      AUTHENTIK_POSTGRESQL__NAME: ${POSTGRES_DB}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
@@ -54,17 +54,16 @@ services:
     container_name: authentik-worker
     restart: unless-stopped
     command: worker
-    user: ${AUTH_UID}:${AUTH_GID}
+    user: ${ASOT_UID}:${ASOT_GID}
     group_add:
       - ${DOCKER_GID}
     environment:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_REDIS__HOST: redis
-      AUTHENTIK_REDIS__PASSWORD: ${REDIS_PASSWORD}
-      AUTHENTIK_POSTGRESQL__HOST: postgresql
-      AUTHENTIK_POSTGRESQL__USER: ${POSTGRES_USER}
-      AUTHENTIK_POSTGRESQL__NAME: ${POSTGRES_DB}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
     labels:
       # logs collection
       logging: promtail
