@@ -1,0 +1,13 @@
+services:
+  authentik-proxy:
+    image: ghcr.io/goauthentik/proxy:2025.4.1
+    container_name: authentik-proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      AUTHENTIK_HOST: idp.${DOMAIN}
+      AUTHENTIK_INSECURE: "false"
+      AUTHENTIK_TOKEN: ${AUTHENTIK_TOKEN}
+    networks:
+      - backend
