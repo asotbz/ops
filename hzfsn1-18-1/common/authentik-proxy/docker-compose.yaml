@@ -6,7 +6,7 @@ services:
     security_opt:
       - no-new-privileges=true
     environment:
-      AUTHENTIK_HOST: idp.${DOMAIN}
+      AUTHENTIK_HOST: https://idp.${DOMAIN}
       AUTHENTIK_INSECURE: "false"
       AUTHENTIK_TOKEN: ${AUTHENTIK_TOKEN}
     networks:
