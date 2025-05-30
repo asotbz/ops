@@ -1,0 +1,34 @@
+services:
+  postgresql:
+    # https://github.com/docker-library/docs/blob/master/postgres/README.md
+    # https://hub.docker.com/_/postgres/
+    image: postgres:16.9-alpine
+    container_name: postgresql
+    restart: unless-stopped
+    env_file: ./postgres.env
+    security_opt:
+      - no-new-privileges=true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: asot
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+volumes:
+  postgresql_data:
