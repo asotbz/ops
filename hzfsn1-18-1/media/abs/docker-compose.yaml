@@ -1,0 +1,124 @@
+services:
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:2.23.0
+    container_name: audiobookshelf
+    restart: unless-stopped
+    user: ${MEDIA_UID}:${MEDIA_GID}
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      - TZ=${TZ}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: media
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.abs-http.rule: Host(`abs.${DOMAIN}`)
+      traefik.http.routers.abs-http.entrypoints: http
+      traefik.http.routers.abs-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.abs-https.rule: Host(`abs.${DOMAIN}`)
+      traefik.http.routers.abs-https.entrypoints: https
+      traefik.http.routers.abs-https.tls: true
+      traefik.http.routers.abs-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.abs-https.service: abs
+      traefik.http.routers.abs-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.abs.loadbalancer.server.port: 13378
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - /mnt/media/audiobooks:/audiobooks
+      - /mnt/media/podcasts:/podcasts
+      - audiobookshelf_config:/config
+      - audiobookshelf_metadata:/metadata
+    networks:
+      - backend
+
+  audiobookrequest:
+    image: markbeep/audiobookrequest:1.4.8
+    container_name: audiobookrequest
+    restart: unless-stopped
+    user: ${MEDIA_UID}:${MEDIA_GID}
+    security_opt:
+      - no-new-privileges=true
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: media
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.abr-http.rule: Host(`abr.${DOMAIN}`)
+      traefik.http.routers.abr-http.entrypoints: http
+      traefik.http.routers.abr-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.abr-https.rule: Host(`abr.${DOMAIN}`)
+      traefik.http.routers.abr-https.entrypoints: https
+      traefik.http.routers.abr-https.tls: true
+      traefik.http.routers.abr-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.abr-https.service: abr
+      traefik.http.routers.abr-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.abr.loadbalancer.server.port: 8000
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - audiobookrequest_config:/config
+    networks:
+      - backend
+
+volumes:
+  audiobookshelf_config:
+  audiobookshelf_metadata:
+  audiobookrequest_config:
