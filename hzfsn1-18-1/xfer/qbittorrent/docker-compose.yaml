@@ -1,14 +1,15 @@
 services:
-  deluge:
-    # https://github.com/linuxserver/docker-deluge/pkgs/container/deluge
-    image: lscr.io/linuxserver/deluge:2.1.1
-    container_name: deluge
+  qbittorrent:
+    # https://github.com/linuxserver/docker-qbittorrent
+    image: ghcr.io/linuxserver/qbittorrent:5.1.0
+    container_name: qbittorrent
     restart: unless-stopped
     environment:
-      # https://docs.linuxserver.io/images/docker-deluge/#environment-variables-e
+      # https://docs.linuxserver.io/images/docker-qbittorrent
       - PUID=${XFER_UID}
       - PGID=${XFER_GID}
       - TZ=${TZ}
+      - TORRENTING_PORT=31728
     labels:
       # logs collection
       logging: promtail
@@ -18,19 +19,19 @@ services:
       traefik.enable: true
 
       # Listen on http, but redirect all requests to https
-      traefik.http.routers.deluge-http.rule: Host(`dge.${DOMAIN}`)
-      traefik.http.routers.deluge-http.entrypoints: http
-      traefik.http.routers.deluge-http.middlewares: redirect-https
+      traefik.http.routers.qbittorrent-http.rule: Host(`qbt.${DOMAIN}`)
+      traefik.http.routers.qbittorrent-http.entrypoints: http
+      traefik.http.routers.qbittorrent-http.middlewares: redirect-https
 
       # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.deluge-https.rule: Host(`dge.${DOMAIN}`)
-      traefik.http.routers.deluge-https.entrypoints: https
-      traefik.http.routers.deluge-https.tls: true
-      traefik.http.routers.deluge-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.deluge-https.service: deluge
-      traefik.http.routers.deluge-https.middlewares: crowdsec-bouncer
+      traefik.http.routers.qbittorrent-https.rule: Host(`qbt.${DOMAIN}`)
+      traefik.http.routers.qbittorrent-https.entrypoints: https
+      traefik.http.routers.qbittorrent-https.tls: true
+      traefik.http.routers.qbittorrent-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.qbittorrent-https.service: qbittorrent
+      traefik.http.routers.qbittorrent-https.middlewares: crowdsec-bouncer
 
-      traefik.http.services.deluge.loadbalancer.server.port: 8112
+      traefik.http.services.qbittorrent.loadbalancer.server.port: 8080
 
       # network policy
       whalewall.enabled: true
@@ -69,13 +70,13 @@ services:
         tag: "{{.Name}}"
     ports:
       # Bittorrent inbound
-      - 31727:31727
-      - 31727:31727/udp
+      - 31728:31728
+      - 31728:31728/udp
     volumes:
-      - deluge_config:/config
+      - qbittorrent_config:/config
       - ${DOWNLOADS_ROOT}:/downloads
     networks:
       - backend
 
 volumes:
-  deluge_config:
+  qbittorrent_config:
