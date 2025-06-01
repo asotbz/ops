@@ -20,31 +20,6 @@ services:
       logging_jobname: containerlogs
       stackname: xfer
 
-      traefik.enable: true
-
-      # Listen on http, but redirect all requests to https
-      traefik.http.routers.streammaster-http.rule: Host(`stm.${DOMAIN}`)
-      traefik.http.routers.streammaster-http.entrypoints: http
-      traefik.http.routers.streammaster-http.middlewares: redirect-https
-
-      # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.streammaster-https.rule: Host(`stm.${DOMAIN}`)
-      traefik.http.routers.streammaster-https.entrypoints: https
-      traefik.http.routers.streammaster-https.tls: true
-      traefik.http.routers.streammaster-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.streammaster-https.service: streammaster
-      traefik.http.routers.streammaster-https.middlewares: streammaster-chain
-
-      # Middleware to redirect local testing url patterns
-      traefik.http.middlewares.streammaster-redirectregex.redirectregex.permanent: true
-      traefik.http.middlewares.streammaster-redirectregex.redirectregex.regex: 'https://(.*)/s/(.*)'
-      traefik.http.middlewares.streammaster-redirectregex.redirectregex.replacement: 'https://$${1}'
-
-      # Chain all middlewares together
-      traefik.http.middlewares.streammaster-chain.chain.middlewares: crowdsec-bouncer, streammaster-redirectregex
-
-      traefik.http.services.streammaster.loadbalancer.server.port: 7095
-
     logging:
       driver: json-file
       options:
@@ -53,6 +28,7 @@ services:
         tag: "{{.Name}}"
     networks:
       - backend
+      #     network_mode: "service:gluetun"
 
 # When referring to a network called 'backend', we mean the common stack's backend network
 networks:
@@ -62,7 +38,7 @@ networks:
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
-  # - ./dispatcharr/docker-compose.yaml
+  - ./dispatcharr/docker-compose.yaml
   - ./nzbhydra2/docker-compose.yaml
   - ./prowlarr/docker-compose.yaml
   - ./streammaster/docker-compose.yaml
