@@ -18,7 +18,7 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: auth
+      stackname: asot
 
       traefik.enable: true
 
@@ -37,6 +37,31 @@ services:
 
       traefik.http.services.idp.loadbalancer.server.port: 9000
 
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+          # database
+          - network: common_backend
+            container: postgres
+          # cache
+          - network: common_backend
+            container: redis
+          # worker
+          - network: common_backend
+            container: authentik-worker
     logging:
       driver: json-file
       options:
@@ -65,8 +90,30 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: auth
+      stackname: asot
 
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # database
+          - network: common_backend
+            container: postgres
+          # cache
+          - network: common_backend
+            container: redis
+          # server
+          - network: common_backend
+            container: authentik-server
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - authentik_media:/media

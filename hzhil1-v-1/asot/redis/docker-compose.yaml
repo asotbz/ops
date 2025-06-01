@@ -20,7 +20,22 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: auth
+      stackname: asot
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # metrics collection
+          - network: common_backend
+            container: redis-exporter
+          # consumers
+          - network: common_backend
+            container: outline
+          - network: common_backend
+            container: authentik-server
+          - network: common_backend
+            container: authentik-worker
     logging:
       driver: json-file
       options:
@@ -47,7 +62,18 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: auth
+      stackname: asot
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # metrics collection
+          - network: common_backend
+            container: redis
+          # metrics scrape
+          - network: common_backend
+            container: prometheus
     logging:
       driver: json-file
       options:

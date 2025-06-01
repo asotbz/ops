@@ -19,6 +19,18 @@ services:
       logging: promtail
       logging_jobname: containerlogs
       stackname: asot
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # consumers
+          - network: common_backend
+            container: outline
+          - network: common_backend
+            container: authentik-server
+          - network: common_backend
+            container: authentik-worker
     logging:
       driver: json-file
       options:
