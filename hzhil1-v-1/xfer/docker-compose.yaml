@@ -1,6 +1,56 @@
 # XFER STACK
 ## Per-stack instances of services (e.g. for backups) are declared here.
 services:
+  xfer-backup:
+    restart: unless-stopped
+    # https://github.com/offen/docker-volume-backup    
+    image: offen/docker-volume-backup:v2.43.3
+    container_name: xfer-backup
+    environment:
+      # https://offen.github.io/docker-volume-backup/reference
+      - BACKUP_FILENAME=xfer-%Y-%m-%dT%H-%M-%S.tar.gz
+      - BACKUP_CRON_EXPRESSION=40 1 * * *
+      - BACKUP_PRUNING_PREFIX=xfer-
+      - BACKUP_RETENTION_DAYS=7
+    env_file: ../backup.env
+    labels:
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+    volumes: 
+      # Backup source volumes
+      # dispatcharr
+      - dispatcharr_data:/backup/dispatcharr_data:ro
+      # nzbhydra2
+      - nzbhydra2_config:/backup/nzbhydra2_config:ro
+      # prowlarr
+      - prowlarr_config:/backup/prowlarr_config:ro
+      # streammaster
+      - streammaster_config:/backup/streammaster_config:ro 
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    networks:
+      - backend
+
   gluetun:
     image: qmcgaw/gluetun:v3.40.0
     container_name: gluetun
@@ -38,7 +88,7 @@ networks:
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
-  - ./dispatcharr/docker-compose.yaml
+  # - ./dispatcharr/docker-compose.yaml
   - ./nzbhydra2/docker-compose.yaml
   - ./prowlarr/docker-compose.yaml
   - ./streammaster/docker-compose.yaml
