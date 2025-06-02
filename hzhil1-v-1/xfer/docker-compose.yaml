@@ -8,9 +8,9 @@ services:
     container_name: xfer-backup
     environment:
       # https://offen.github.io/docker-volume-backup/reference
-      - BACKUP_FILENAME=xfer-%Y-%m-%dT%H-%M-%S.tar.gz
+      - BACKUP_FILENAME=hzhil1-v-1-xfer-%Y-%m-%dT%H-%M-%S.tar.gz
       - BACKUP_CRON_EXPRESSION=40 1 * * *
-      - BACKUP_PRUNING_PREFIX=xfer-
+      - BACKUP_PRUNING_PREFIX=hzhil1-v-1-xfer-
       - BACKUP_RETENTION_DAYS=7
     env_file: ./backup.env
     labels:
