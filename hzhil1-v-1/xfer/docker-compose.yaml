@@ -12,7 +12,7 @@ services:
       - BACKUP_CRON_EXPRESSION=40 1 * * *
       - BACKUP_PRUNING_PREFIX=xfer-
       - BACKUP_RETENTION_DAYS=7
-    env_file: ../backup.env
+    env_file: ./backup.env
     labels:
       logging: promtail
       logging_jobname: containerlogs
