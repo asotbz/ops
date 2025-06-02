@@ -19,12 +19,12 @@ services:
       traefik.enable: true
 
       # Listen on http, but redirect all requests to https
-      traefik.http.routers.autobrr-http.rule: Host(`abr.${DOMAIN}`)
+      traefik.http.routers.autobrr-http.rule: Host(`brr.${DOMAIN}`)
       traefik.http.routers.autobrr-http.entrypoints: http
       traefik.http.routers.autobrr-http.middlewares: redirect-https
 
       # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.autobrr-https.rule: Host(`abr.${DOMAIN}`)
+      traefik.http.routers.autobrr-https.rule: Host(`brr.${DOMAIN}`)
       traefik.http.routers.autobrr-https.entrypoints: https
       traefik.http.routers.autobrr-https.tls: true
       traefik.http.routers.autobrr-https.tls.certresolver: ${CERT_RESOLVER}
