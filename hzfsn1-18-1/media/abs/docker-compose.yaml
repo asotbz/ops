@@ -29,7 +29,7 @@ services:
       traefik.http.routers.abs-https.service: abs
       traefik.http.routers.abs-https.middlewares: crowdsec-bouncer
 
-      traefik.http.services.abs.loadbalancer.server.port: 13378
+      traefik.http.services.abs.loadbalancer.server.port: 80
 
       # network policy
       whalewall.enabled: true

@@ -34,9 +34,9 @@ services:
     volumes: 
       # Backup source volumes
       # abs
-      # - audiobookshelf_config:/backup/audiobookshelf_config:ro
-      # - audiobookshelf_metadata:/backup/audiobookshelf_metadata:ro
-      # - audiobookrequest_config:/backup/audiobookrequest_config:ro
+      - audiobookshelf_config:/backup/audiobookshelf_config:ro
+      - audiobookshelf_metadata:/backup/audiobookshelf_metadata:ro
+      - audiobookrequest_config:/backup/audiobookrequest_config:ro
       # cwa
       - calibre-web-automated_config:/backup/calibre-web-automated_config:ro
 
@@ -57,5 +57,5 @@ networks:
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
-  # - ./abs/docker-compose.yaml
+  - ./abs/docker-compose.yaml
   - ./cwa/docker-compose.yaml
