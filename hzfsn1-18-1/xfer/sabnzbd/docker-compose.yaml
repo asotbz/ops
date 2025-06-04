@@ -3,7 +3,7 @@ services:
     # https://github.com/home-operations/containers/pkgs/container/sabnzbd
     # https://github.com/sabnzbd/sabnzbd
     image: ghcr.io/home-operations/sabnzbd:4.5.1
-    user: ${MEDIA_UID}:${MEDIA_GID}
+    user: ${XFER_UID}:${XFER_GID}
     security_opt:
       - no-new-privileges=true
     container_name: sabnzbd
@@ -14,7 +14,7 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: xfer
 
       traefik.enable: true
 
@@ -73,7 +73,7 @@ services:
     # https://github.com/onedr0p/exportarr
     image: ghcr.io/onedr0p/exportarr:v2.2.0
     container_name: sabnzbd-exporter
-    user: ${MEDIA_UID}:${MEDIA_GID}
+    user: ${XFER_UID}:${XFER_GID}
     security_opt:
       - no-new-privileges=true
     restart: unless-stopped
@@ -87,7 +87,7 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: xfer
       
       # network policy
       whalewall.enabled: true
