@@ -1,0 +1,112 @@
+services:
+  sabnzbd:
+    # https://github.com/home-operations/containers/pkgs/container/sabnzbd
+    # https://github.com/sabnzbd/sabnzbd
+    image: ghcr.io/home-operations/sabnzbd:4.5.1
+    user: ${MEDIA_UID}:${MEDIA_GID}
+    security_opt:
+      - no-new-privileges=true
+    container_name: sabnzbd
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: media
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.sabnzbd-http.rule: Host(`sab.${DOMAIN}`)
+      traefik.http.routers.sabnzbd-http.entrypoints: http
+      traefik.http.routers.sabnzbd-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.sabnzbd-https.rule: Host(`sab.${DOMAIN}`)
+      traefik.http.routers.sabnzbd-https.entrypoints: https
+      traefik.http.routers.sabnzbd-https.tls: true
+      traefik.http.routers.sabnzbd-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.sabnzbd-https.service: sabnzbd
+      traefik.http.routers.sabnzbd-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.sabnzbd.loadbalancer.server.port: 8080
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 80
+              - 443
+          # NNTP/S
+          - proto: tcp
+            dst_ports:
+              - 119
+              - 563
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+          # metrics collection
+          - network: common_backend
+            container: sabnzbd-exporter
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - sabnzbd_config:/config
+      - /mnt/media/nzbdl:/data/nzbdl
+    networks:
+      - backend
+
+  sabnzbd-exporter:
+    # https://github.com/onedr0p/exportarr
+    image: ghcr.io/onedr0p/exportarr:v2.2.0
+    container_name: sabnzbd-exporter
+    user: ${MEDIA_UID}:${MEDIA_GID}
+    security_opt:
+      - no-new-privileges=true
+    restart: unless-stopped
+    command: ["sabnzbd"]
+    environment:
+      # https://github.com/onedr0p/exportarr#configuration
+      - PORT=9711
+      - URL=http://sabnzbd:8080
+      - APIKEY=${SABNZBD_API_KEY}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: media
+      
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # metrics collection
+          - network: common_backend
+            container: sabnzbd
+          # metrics scrape
+          - network: common_backend
+            container: prometheus
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    networks:
+      - backend
+
+volumes:
+  sabnzbd_config:
