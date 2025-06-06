@@ -54,5 +54,7 @@ networks:
 # Remaining services in the stack have their own Compose configuration. 
 include:
   - ./autobrr/docker-compose.yaml
-  - ./deluge/docker-compose.yaml
+  # - ./deluge/docker-compose.yaml
   - ./ownfoil/docker-compose.yaml
+  - ./qbittorrent/docker-compose.yaml
+
