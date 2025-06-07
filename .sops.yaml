@@ -2,3 +2,5 @@
 creation_rules:
   - path_regex: .*hz.*
     age: 'age1nzak27uave7mxuhqvuh67me3pul29z3yjqhur46grmx4x0mfju7syasnup'
+  - path_regex: .*tn.*
+    age: 'age1nzak27uave7mxuhqvuh67me3pul29z3yjqhur46grmx4x0mfju7syasnup'
