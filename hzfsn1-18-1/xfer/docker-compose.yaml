@@ -35,6 +35,8 @@ services:
       # Backup source volumes
       # autobrr
       - autobrr_config:/backup/autobrr_config:ro
+      # qbittorrent
+      - qbittorrent_config:/backup/qbittorrent_config:ro
 
     logging:
       driver: json-file
@@ -54,7 +56,5 @@ networks:
 # Remaining services in the stack have their own Compose configuration. 
 include:
   - ./autobrr/docker-compose.yaml
-  # - ./deluge/docker-compose.yaml
   - ./ownfoil/docker-compose.yaml
   - ./qbittorrent/docker-compose.yaml
-
