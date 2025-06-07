@@ -1,6 +1,6 @@
 services:
   authentik-server:
-    image: ghcr.io/goauthentik/server:2025.4.1
+    image: ghcr.io/goauthentik/server:2025.6.1
     container_name: authentik-server
     restart: unless-stopped
     command: server
@@ -71,7 +71,7 @@ services:
     networks:
       - backend
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2025.4.1
+    image: ghcr.io/goauthentik/server:2025.6.1
     container_name: authentik-worker
     restart: unless-stopped
     command: worker
