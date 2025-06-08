@@ -19,23 +19,9 @@ services:
 
       # network policy
       whalewall.enabled: true
-      whalewall.rules: |
-        output:
-          # DNS
-          - proto: udp
-            dst_ports:
-              - 53
-          # HTTP/S
-          - proto: tcp
-            dst_ports:
-              - 443
-              - 80
+      # backup: no traffic in or out
     volumes: 
       # Backup source volumes
-      # autobrr
-      - autobrr_config:/backup/autobrr_config:ro
-      # qbittorrent
-      - qbittorrent_config:/backup/qbittorrent_config:ro
 
       # Backup target
       - ${ZFS_POOL_ROOT_HDD}/docker-backups:/archive
@@ -57,6 +43,4 @@ networks:
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
-  - ./autobrr/docker-compose.yaml
   - ./ownfoil/docker-compose.yaml
-  - ./qbittorrent/docker-compose.yaml
