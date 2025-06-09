@@ -1,36 +1,25 @@
 # MEDIA STACK
 ## Per-stack instances of services (e.g. for backups) are declared here.
 services:
-  media-backup:
+  asot-media-backup:
     restart: unless-stopped
     # https://github.com/offen/docker-volume-backup    
     image: offen/docker-volume-backup:v2.43.3
-    container_name: media-backup
+    container_name: asot-media-backup
     environment:
       # https://offen.github.io/docker-volume-backup/reference
-      - BACKUP_FILENAME=hzfsn1-18-1-media-%Y-%m-%dT%H-%M-%S.tar.gz
+      - BACKUP_FILENAME=asot-media-%Y-%m-%dT%H-%M-%S.tar.gz
       - BACKUP_CRON_EXPRESSION=20 2 * * *
-      - BACKUP_PRUNING_PREFIX=hzfsn1-18-1-media-
+      - BACKUP_PRUNING_PREFIX=asot-media-
       - BACKUP_RETENTION_DAYS=7
-    env_file: ./backup.env
     labels:
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: asot-media
 
       # network policy
       whalewall.enabled: true
-      whalewall.rules: |
-        output:
-          # DNS
-          - proto: udp
-            dst_ports:
-              - 53
-          # HTTP/S
-          - proto: tcp
-            dst_ports:
-              - 443
-              - 80
+      # backup: no traffic in or out
     volumes: 
       # Backup source volumes
       # abs
@@ -40,6 +29,8 @@ services:
       # cwa
       - calibre-web-automated_config:/backup/calibre-web-automated_config:ro
 
+      # Backup target
+      - ${ZFS_POOL_ROOT_HDD}/docker-backups:/archive
     logging:
       driver: json-file
       options:

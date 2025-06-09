@@ -9,13 +9,13 @@ services:
     restart: unless-stopped
     environment:
       - PUID=${MEDIA_UID}
-      - PGID=${MEDIA_GID}
+      - PGID=${MEDIA_SHARED_GID}
       - TZ=${TZ}
     labels:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: asot-media
 
       traefik.enable: true
 
@@ -77,14 +77,14 @@ services:
     restart: unless-stopped
     environment:
       - UID=${MEDIA_UID}
-      - GID=${MEDIA_GID}
+      - GID=${MEDIA_SHARED_GID}
       - TZ=${TZ}
       - AA_DONATOR_KEY=${AA_DONATOR_KEY}
     labels:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: asot-media
 
       traefik.enable: true
 

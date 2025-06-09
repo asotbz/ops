@@ -3,7 +3,7 @@ services:
     image: ghcr.io/advplyr/audiobookshelf:2.24.0
     container_name: audiobookshelf
     restart: unless-stopped
-    user: ${MEDIA_UID}:${MEDIA_GID}
+    user: ${MEDIA_UID}:${MEDIA_SHARED_GID}
     security_opt:
       - no-new-privileges=true
     environment:
@@ -12,7 +12,7 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: asot-media
 
       traefik.enable: true
 
@@ -65,14 +65,14 @@ services:
     image: markbeep/audiobookrequest:1.4.8
     container_name: audiobookrequest
     restart: unless-stopped
-    user: ${MEDIA_UID}:${MEDIA_GID}
+    user: ${MEDIA_UID}:${MEDIA_SHARED_GID}
     security_opt:
       - no-new-privileges=true
     labels:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: media
+      stackname: asot-media
 
       traefik.enable: true
 
