@@ -49,4 +49,5 @@ networks:
 # Remaining services in the stack have their own Compose configuration. 
 include:
   - ./abs/docker-compose.yaml
+  - ./authentik-proxy/docker-compose.yaml
   - ./cwa/docker-compose.yaml
