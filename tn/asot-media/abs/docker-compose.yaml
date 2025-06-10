@@ -54,8 +54,8 @@ services:
         max-file: 1
         tag: "{{.Name}}"
     volumes:
-      - /mnt/media/audiobooks:/audiobooks
-      - /mnt/media/podcasts:/podcasts
+      - /mnt/andromeda/media/audiobooks:/audiobooks
+      - /mnt/andromeda/media/podcasts:/podcasts
       - audiobookshelf_config:/config
       - audiobookshelf_metadata:/metadata
     networks:

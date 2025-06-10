@@ -64,8 +64,8 @@ services:
         tag: "{{.Name}}"
     volumes:
       - calibre-web-automated_config:/config
-      - /mnt/media/ebooks/cwa-book-ingest:/cwa-book-ingest
-      - /mnt/media/ebooks/calibre-library:/calibre-library
+      - /mnt/andromeda/media/ebooks/cwa-book-ingest:/cwa-book-ingest
+      - /mnt/andromeda/media/ebooks/calibre-library:/calibre-library
     networks:
       - backend
 
@@ -128,7 +128,7 @@ services:
         max-file: 1
         tag: "{{.Name}}"
     volumes:
-      - /mnt/media/ebooks/cwa-book-ingest:/cwa-book-ingest
+      - /mnt/andromeda/media/ebooks/cwa-book-ingest:/cwa-book-ingest
     networks:
       - backend
     
