@@ -6,8 +6,8 @@ services:
     restart: unless-stopped
     environment:
       # https://github.com/a1ex4/ownfoil/tree/v1#docker-compose
-      - PUID=${XFER_UID}
-      - PGID=${XFER_SHARED_GID}
+      - PUID=${MEDIA_UID}
+      - PGID=${MEDIA_SHARED_GID}
       - USERNAME=${HINOX_USER}
       - PASSWORD=${HINOX_PASSWORD}
       - SAVE_ENABLED=false
@@ -15,7 +15,7 @@ services:
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
-      stackname: asot-xfer
+      stackname: asot-media
 
       traefik.enable: true
 
