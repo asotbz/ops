@@ -25,6 +25,13 @@ services:
       traefik.http.routers.cwa-http.middlewares: redirect-https
 
       # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.cwa-opds.rule: Host(`cwa.${DOMAIN}`) && PathPrefix(`/opds`)
+      traefik.http.routers.cwa-opds.entrypoints: https
+      traefik.http.routers.cwa-opds.tls: true
+      traefik.http.routers.cwa-opds.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.cwa-opds.service: cwa
+      traefik.http.routers.cwa-opds.middlewares: crowdsec-bouncer
+      
       traefik.http.routers.cwa-https.rule: Host(`cwa.${DOMAIN}`)
       traefik.http.routers.cwa-https.entrypoints: https
       traefik.http.routers.cwa-https.tls: true
