@@ -1,7 +1,7 @@
 services:
-  streammaster-gluetun:
+  gluetun:
     image: qmcgaw/gluetun:v3.40.0
-    container_name: streammaster-gluetun
+    container_name: gluetun
     cap_add:
       - NET_ADMIN
     devices:
