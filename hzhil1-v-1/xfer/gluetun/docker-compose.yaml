@@ -23,12 +23,12 @@ services:
 
       ## streammaster
       # Listen on http, but redirect all requests to https
-      traefik.http.routers.streammaster-http.rule: Host(`stm.${DOMAIN}`, `streammaster.${ALT_DOMAIN_AM}`)
+      traefik.http.routers.streammaster-http.rule: Host(`stm.${DOMAIN}`) || Host(`streammaster.${ALT_DOMAIN_AM}`)
       traefik.http.routers.streammaster-http.entrypoints: http
       traefik.http.routers.streammaster-http.middlewares: redirect-https
 
       # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.streammaster-https.rule: Host(`stm.${DOMAIN}`, `streammaster.${ALT_DOMAIN_AM}`)
+      traefik.http.routers.streammaster-https.rule: Host(`stm.${DOMAIN}`) || Host(`streammaster.${ALT_DOMAIN_AM}`)
       traefik.http.routers.streammaster-https.entrypoints: https
       traefik.http.routers.streammaster-https.tls: true
       traefik.http.routers.streammaster-https.tls.certresolver: ${CERT_RESOLVER}
