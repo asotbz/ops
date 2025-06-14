@@ -89,6 +89,7 @@ networks:
 # Remaining services in the stack have their own Compose configuration. 
 include:
   # - ./dispatcharr/docker-compose.yaml
+  - ./gluetun/docker-compose.yaml
   - ./nzbhydra2/docker-compose.yaml
   - ./prowlarr/docker-compose.yaml
   - ./streammaster/docker-compose.yaml

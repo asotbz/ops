@@ -16,22 +16,7 @@ services:
       logging_jobname: containerlogs
       stackname: xfer
 
-      traefik.enable: true
-
-      # Listen on http, but redirect all requests to https
-      traefik.http.routers.dispatcharr-http.rule: Host(`dsp.${DOMAIN}`)
-      traefik.http.routers.dispatcharr-http.entrypoints: http
-      traefik.http.routers.dispatcharr-http.middlewares: redirect-https
-
-      # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.dispatcharr-https.rule: Host(`dsp.${DOMAIN}`)
-      traefik.http.routers.dispatcharr-https.entrypoints: https
-      traefik.http.routers.dispatcharr-https.tls: true
-      traefik.http.routers.dispatcharr-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.dispatcharr-https.service: dispatcharr
-      traefik.http.routers.dispatcharr-https.middlewares: crowdsec-bouncer
-
-      traefik.http.services.dispatcharr.loadbalancer.server.port: 9191
+      # traefik: see gluetun
 
       # network policy
       whalewall.enabled: true
@@ -57,8 +42,7 @@ services:
         tag: "{{.Name}}"
     volumes:
       - dispatcharr_data:/data
-    networks:
-      - backend
+    network_mode: "service:gluetun"
 
 volumes:
   dispatcharr_data:
