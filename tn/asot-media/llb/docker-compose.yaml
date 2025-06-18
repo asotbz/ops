@@ -34,7 +34,7 @@ services:
 
       traefik.http.services.llb.loadbalancer.server.port: 5299
 
-      traefik.http.middleware.llb-chain.chain.middlewares: crowdsec-bouncer,authentik
+      traefik.http.middlewares.llb-chain.chain.middlewares: crowdsec-bouncer,authentik
 
       # network policy
       whalewall.enabled: true

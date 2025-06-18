@@ -34,7 +34,7 @@ services:
 
       traefik.http.services.rdr.loadbalancer.server.port: 8787
 
-      traefik.http.middleware.rdr-chain.chain.middlewares: crowdsec-bouncer,authentik
+      traefik.http.middlewares.rdr-chain.chain.middlewares: crowdsec-bouncer,authentik
 
       # network policy
       whalewall.enabled: true
