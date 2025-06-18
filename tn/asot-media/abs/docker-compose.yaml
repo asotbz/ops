@@ -54,8 +54,8 @@ services:
         max-file: 1
         tag: "{{.Name}}"
     volumes:
-      - /mnt/andromeda/media/audiobooks:/audiobooks
-      - /mnt/andromeda/media/podcasts:/podcasts
+      - ${ZFS_POOL_ROOT_HDD}/media/audiobooks:/audiobooks
+      - ${ZFS_POOL_ROOT_HDD}/media/podcasts:/podcasts
       - audiobookshelf_config:/config
       - audiobookshelf_metadata:/metadata
     networks:
@@ -65,7 +65,7 @@ services:
     image: markbeep/audiobookrequest:1.4.8
     container_name: audiobookrequest
     restart: unless-stopped
-    user: ${MEDIA_UID}:${MEDIA_SHARED_GID}
+    user: ${BOOKS_UID}:${MEDIA_SHARED_GID}
     security_opt:
       - no-new-privileges=true
     labels:

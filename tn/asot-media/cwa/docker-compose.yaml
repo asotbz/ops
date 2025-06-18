@@ -8,7 +8,7 @@ services:
       - no-new-privileges=true
     restart: unless-stopped
     environment:
-      - PUID=${MEDIA_UID}
+      - PUID=${BOOKS_UID}
       - PGID=${MEDIA_SHARED_GID}
       - TZ=${TZ}
     labels:
@@ -71,8 +71,8 @@ services:
         tag: "{{.Name}}"
     volumes:
       - calibre-web-automated_config:/config
-      - /mnt/andromeda/media/ebooks/cwa-book-ingest:/cwa-book-ingest
-      - /mnt/andromeda/media/ebooks/calibre-library:/calibre-library
+      - ${ZFS_POOL_ROOT_HDD}/media/cwa-book-ingest:/cwa-book-ingest
+      - ${ZFS_POOL_ROOT_HDD}/media/books:/calibre-library
     networks:
       - backend
 
@@ -83,7 +83,7 @@ services:
       - no-new-privileges=true
     restart: unless-stopped
     environment:
-      - UID=${MEDIA_UID}
+      - UID=${BOOKS_UID}
       - GID=${MEDIA_SHARED_GID}
       - TZ=${TZ}
       - AA_DONATOR_KEY=${AA_DONATOR_KEY}
@@ -135,7 +135,7 @@ services:
         max-file: 1
         tag: "{{.Name}}"
     volumes:
-      - /mnt/andromeda/media/ebooks/cwa-book-ingest:/cwa-book-ingest
+      - ${ZFS_POOL_ROOT_HDD}/media/cwa-book-ingest:/cwa-book-ingest
     networks:
       - backend
     
