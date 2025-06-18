@@ -29,8 +29,8 @@ services:
       traefik.http.routers.rdr-https.entrypoints: https
       traefik.http.routers.rdr-https.tls: true
       traefik.http.routers.rdr-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.rdr-https.service: cwa
-      traefik.http.routers.rdr-https.middlewares: cwa-chain
+      traefik.http.routers.rdr-https.service: rdr
+      traefik.http.routers.rdr-https.middlewares: rdr-chain
 
       traefik.http.services.rdr.loadbalancer.server.port: 8787
 

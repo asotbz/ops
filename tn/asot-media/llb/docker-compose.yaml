@@ -29,8 +29,8 @@ services:
       traefik.http.routers.llb-https.entrypoints: https
       traefik.http.routers.llb-https.tls: true
       traefik.http.routers.llb-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.llb-https.service: cwa
-      traefik.http.routers.llb-https.middlewares: cwa-chain
+      traefik.http.routers.llb-https.service: llb
+      traefik.http.routers.llb-https.middlewares: llb-chain
 
       traefik.http.services.llb.loadbalancer.server.port: 5299
 
