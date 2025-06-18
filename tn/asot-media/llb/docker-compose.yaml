@@ -1,5 +1,5 @@
 services:
-  readarr:
+  lazylibrarian:
     # https://github.com/linuxserver/docker-lazylibrarian
     # https://hub.docker.com/r/linuxserver/lazylibrarian/tags
     image: ghcr.io/linuxserver/lazylibrarian:version-aaacf1d0
