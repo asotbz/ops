@@ -56,6 +56,9 @@ services:
           # reverse proxy
           - network: common_backend
             container: traefik
+          # library sync
+          - network: common_backend
+            container: calibre-web-automated
     logging:
       driver: json-file
       options:

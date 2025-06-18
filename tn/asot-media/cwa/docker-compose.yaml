@@ -63,6 +63,9 @@ services:
           # reverse proxy
           - network: common_backend
             container: traefik
+          # library sync
+          - network: common_backend
+            container: lazylibrarian
     logging:
       driver: json-file
       options:
