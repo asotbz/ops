@@ -1,0 +1,60 @@
+services:
+  common-backup:
+    restart: unless-stopped
+    # https://github.com/offen/docker-volume-backup    
+    image: offen/docker-volume-backup:v2.43.4
+    container_name: common-backup
+    environment:
+      # https://offen.github.io/docker-volume-backup/reference
+      - BACKUP_FILENAME=hzhil1-v-1-common-%Y-%m-%dT%H-%M-%S.tar.gz
+      - BACKUP_CRON_EXPRESSION=40 1 * * *
+      - BACKUP_PRUNING_PREFIX=hzhil1-v-1-common-
+      - BACKUP_RETENTION_DAYS=7
+    env_file: ./backup.env
+    labels:
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: common
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+    volumes: 
+      # Backup source volumes
+      # crowdsec
+      - crowdsec_config:/backup/crowdsec_config:ro
+      - crowdsec_data:/backup/crowdsec_data:ro
+      # traefik
+      - traefik_le:/backup/traefik_le:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    networks:
+      - backend
+         
+networks:
+  backend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${COMMON_BACKEND_SUBNET_V4}
+
+include:
+  - ./crowdsec/docker-compose.yaml
+  - ./nginx/docker-compose.yaml
+  - ./portainer/docker-compose.yaml
+  - ./traefik/docker-compose.yaml
+  - ./whalewall/docker-compose.yaml

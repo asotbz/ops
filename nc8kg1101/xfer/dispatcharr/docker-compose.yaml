@@ -1,0 +1,48 @@
+services:
+  dispatcharr:
+    # https://github.com/Dispatcharr/Dispatcharr
+    image: ghcr.io/dispatcharr/dispatcharr:0.6.0
+    security_opt:
+      - no-new-privileges=true
+    container_name: dispatcharr
+    restart: unless-stopped
+    environment:
+      - DISPATCHARR_ENV=aio
+      - REDIS_HOST=localhost
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      # traefik: see gluetun
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 80
+              - 443
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - dispatcharr_data:/data
+    network_mode: "service:gluetun"
+
+volumes:
+  dispatcharr_data:
