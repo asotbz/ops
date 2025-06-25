@@ -8,6 +8,9 @@ services:
     env_file: ./outline.env
     user: ${ASOT_UID}:${ASOT_GID}
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "outline_data"
+      
       # logs collection
       logging: promtail
       logging_jobname: containerlogs

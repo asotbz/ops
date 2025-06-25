@@ -15,6 +15,9 @@ services:
       - authentik_media:/media
       - authentik_templates:/templates
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "authentik_media,authentik_certs,authentik_templates"
+      
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
