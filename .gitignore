@@ -1,3 +1,3 @@
-backup.env
+!*.sops.env
+*.env
 .env
-**/.env
