@@ -1,6 +1,45 @@
 # ASOT STACK
 ## Per-stack instances of services are declared here.
-      
+services:
+  asot-backup:
+    restart: unless-stopped
+    # https://github.com/lawndoc/stack-back
+    image: ghcr.io/lawndoc/stack-back:v1.4.2
+    container_name: asot-backup
+    env_file: ./stack-back.env
+    labels:
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: common
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+    volumes: 
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - backup_cache:/cache
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    networks:
+      - backend
+
+volumes:
+  backup_cache:
+
 # When referring to a network called 'backend', we mean the common stack's backend network
 networks:
   backend:
