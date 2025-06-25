@@ -53,12 +53,12 @@ services:
       traefik.enable: true
       
       # Listen on http, but redirect all requests to https
-      traefik.http.routers.traefik-http.rule: Host(`traefik-hil.${DOMAIN}`)
+      traefik.http.routers.traefik-http.rule: Host(`traefik.${DOMAIN}`)
       traefik.http.routers.traefik-http.entrypoints: http
       traefik.http.routers.traefik-http.middlewares: redirect-https
       
       # Direct https requests to internal API, protecting with basic auth and crowdsec
-      traefik.http.routers.traefik-https.rule: Host(`traefik-hil.${DOMAIN}`)
+      traefik.http.routers.traefik-https.rule: Host(`traefik.${DOMAIN}`)
       traefik.http.routers.traefik-https.entrypoints: https
       traefik.http.routers.traefik-https.tls: true
       traefik.http.routers.traefik-https.tls.certresolver: ${CERT_RESOLVER}
