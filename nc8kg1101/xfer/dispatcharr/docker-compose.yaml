@@ -11,6 +11,9 @@ services:
       - REDIS_HOST=localhost
       - CELERY_BROKER_URL=redis://localhost:6379/0
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "dispatcharr_data"
+      
       # logs collection
       logging: promtail
       logging_jobname: containerlogs

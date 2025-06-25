@@ -10,6 +10,9 @@ services:
       - PGID=${XFER_GID}
       - TZ=${TZ}
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "nzbhydra2_config"
+      
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
