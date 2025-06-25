@@ -15,8 +15,13 @@ services:
       retries: 5
       timeout: 5s
     labels:
-      stack-back.postgres: true
-      
+      # stack-back limitation: only backs up POSTGRES_DB. Stop the container instead
+      # https://stack-back.readthedocs.io/en/latest/guide/configuration.html#postgres
+      stack-back.postgres: false
+      stack-back.volumes: true
+      stack-back.volumes.include: "postgresql_data"
+      stack-back.volumes.stop-during-backup: true
+
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
