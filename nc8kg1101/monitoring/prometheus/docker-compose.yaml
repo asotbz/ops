@@ -16,6 +16,9 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.external-url=http://prometheus.${DOMAIN}'
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "prometheus_data"
+
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
