@@ -13,6 +13,26 @@ services:
       logging_jobname: containerlogs
       stackname: monitoring
 
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.loki-http.rule: Host(`loki.${DOMAIN}`)
+      traefik.http.routers.loki-http.entrypoints: http
+      traefik.http.routers.loki-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.loki-https.rule: Host(`loki.${DOMAIN}`)
+      traefik.http.routers.loki-https.entrypoints: https
+      traefik.http.routers.loki-https.tls: true
+      traefik.http.routers.loki-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.loki-https.service: loki
+      traefik.http.routers.loki-https.middlewares: loki-chain
+
+      traefik.http.middlewares.traefik-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH}
+      traefik.http.middlewares.loki-chain.chain.middlewares: crowdsec-bouncer,traefik-auth
+
+      traefik.http.services.loki.loadbalancer.server.port: 3100
+
       # network policy
       whalewall.enabled: true
       whalewall.rules: |
@@ -26,6 +46,10 @@ services:
             container: alertmanager
           - network: common_backend
             container: promtail
+          # reverse proxy
+          - network: common_frontend
+            container: traefik
+
     logging:
       driver: json-file
       options:
