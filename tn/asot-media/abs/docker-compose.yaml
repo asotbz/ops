@@ -9,6 +9,9 @@ services:
     environment:
       - TZ=${TZ}
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "audiobookshelf_config,audiobookshelf_metadata"
+
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
@@ -69,6 +72,9 @@ services:
     security_opt:
       - no-new-privileges=true
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "audiobookrequest_config"
+      
       # logs collection
       logging: promtail
       logging_jobname: containerlogs

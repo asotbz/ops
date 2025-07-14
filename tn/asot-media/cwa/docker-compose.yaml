@@ -12,6 +12,9 @@ services:
       - PGID=${MEDIA_SHARED_GID}
       - TZ=${TZ}
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "calibre-web-automated_config"
+
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
