@@ -45,7 +45,8 @@ services:
         tag: "{{.Name}}"
     volumes:
       - dispatcharr_data:/data
-    network_mode: "service:gluetun"
+    networks:
+      - backend
 
 volumes:
   dispatcharr_data:
