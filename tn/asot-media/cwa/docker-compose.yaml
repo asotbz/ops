@@ -2,7 +2,7 @@ services:
   calibre-web-automated:
     # https://github.com/crocodilestick/Calibre-Web-Automated
     # https://hub.docker.com/r/crocodilestick/calibre-web-automated/tags
-    image: crocodilestick/calibre-web-automated:V3.0.4
+    image: crocodilestick/calibre-web-automated:V3.1.2
     container_name: calibre-web-automated
     security_opt:
       - no-new-privileges=true
