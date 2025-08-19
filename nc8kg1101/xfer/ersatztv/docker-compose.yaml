@@ -36,7 +36,7 @@ services:
       traefik.http.routers.ersatztv-https-unauth.middlewares: crowdsec-bouncer
 
       # Basic auth middleware
-      traefik.http.middlewares.ersatztv-auth.basicauth.users: ${ERSATZTV_USER}:${ERSATZTV_PASSWORD_HASH}
+      traefik.http.middlewares.ersatztv-auth.basicauth.users: ${ERSATZTV_USERNAME}:${ERSATZTV_PASSWORD_HASH}
       
       # Chain middlewares including basic auth
       traefik.http.middlewares.ersatztv-chain.chain.middlewares: crowdsec-bouncer,ersatztv-auth
