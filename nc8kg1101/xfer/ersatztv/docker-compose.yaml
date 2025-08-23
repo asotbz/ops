@@ -59,6 +59,9 @@ services:
           # reverse proxy
           - network: common_backend
             container: traefik
+          # media servers
+          - network: common_backend
+            container: jellyfin
     logging:
       driver: json-file
       options:
