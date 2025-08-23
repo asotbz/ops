@@ -1,0 +1,63 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:10.10.7
+    container_name: jellyfin
+    restart: unless-stopped
+    user: ${XFER_UID}:${XFER_GID}
+    environment:
+      - TZ=${TZ}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.jellyfin-http.rule: Host(`jfn.${DOMAIN}`)
+      traefik.http.routers.jellyfin-http.entrypoints: http
+      traefik.http.routers.jellyfin-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first, apply basic auth
+      traefik.http.routers.jellyfin-https.rule: Host(`jfn.${DOMAIN}`)
+      traefik.http.routers.jellyfin-https.entrypoints: https
+      traefik.http.routers.jellyfin-https.tls: true
+      traefik.http.routers.jellyfin-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.jellyfin-https.service: jellyfin
+      traefik.http.routers.jellyfin-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.jellyfin.loadbalancer.server.port: 8096
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 80
+              - 443
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+      - /var/media/music_videos:/data/music_videos:ro
+    networks:
+      - backend
+
+volumes:
+  jellyfin_config:
+  jellyfin_cache:
