@@ -62,6 +62,10 @@ services:
           # media servers
           - network: common_backend
             container: jellyfin
+          - network: common_backend
+            container: streammaster
+          - network: common_backend
+            container: dispatcharr
     logging:
       driver: json-file
       options:

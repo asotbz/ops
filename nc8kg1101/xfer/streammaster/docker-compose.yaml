@@ -66,6 +66,9 @@ services:
           # reverse proxy
           - network: common_backend
             container: traefik
+          # media servers
+          - network: common_backend
+            container: ersatztv
     logging:
       driver: json-file
       options:
