@@ -58,6 +58,7 @@ services:
       - jellyfin_config:/config
       - jellyfin_cache:/cache
       - /var/media/music_videos:/data/music_videos:ro
+      - /var/media/other_videos:/data/other_videos:ro
     networks:
       - backend
 
