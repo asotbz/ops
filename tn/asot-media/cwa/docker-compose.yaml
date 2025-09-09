@@ -2,7 +2,7 @@ services:
   calibre-web-automated:
     # https://github.com/crocodilestick/Calibre-Web-Automated
     # https://hub.docker.com/r/crocodilestick/calibre-web-automated/tags
-    image: crocodilestick/calibre-web-automated:V3.1.2
+    image: crocodilestick/calibre-web-automated:V3.1.4
     container_name: calibre-web-automated
     security_opt:
       - no-new-privileges=true
@@ -80,7 +80,7 @@ services:
       - backend
 
   calibre-web-automated-book-downloader:
-    image: ghcr.io/calibrain/calibre-web-automated-book-downloader:0.2.0
+    image: ghcr.io/calibrain/calibre-web-automated-book-downloader:0.2.1
     container_name: calibre-web-automated-book-downloader
     security_opt:
       - no-new-privileges=true
