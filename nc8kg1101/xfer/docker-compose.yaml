@@ -11,7 +11,6 @@ networks:
 include:
   - ./dispatcharr/docker-compose.yaml
   - ./ersatztv/docker-compose.yaml
-  - ./jellyfin/docker-compose.yaml
   - ./nzbhydra2/docker-compose.yaml
   - ./prowlarr/docker-compose.yaml
   - ./streammaster/docker-compose.yaml
