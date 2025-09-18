@@ -26,15 +26,32 @@ services:
       traefik.http.routers.dispatcharr-http.entrypoints: http
       traefik.http.routers.dispatcharr-http.middlewares: redirect-https
 
-      # Direct all https requests to the service, checking with crowdsec first
+      # Deny anonymous access to specific paths
+      traefik.http.routers.dispatcharr-denypaths.rule: Host(`dsp.${DOMAIN}`) && (Path(`/hdhr`) || Path(`/output/epg`) || Path(`/output/m3u`))
+      traefik.http.routers.dispatcharr-denypaths.entrypoints: https
+      traefik.http.routers.dispatcharr-denypaths.priority: 50
+      traefik.http.routers.dispatcharr-denypaths.tls: true
+      traefik.http.routers.dispatcharr-denypaths.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.dispatcharr-denypaths.service: noop@internal
+
+      # Direct all https requests to the service
       traefik.http.routers.dispatcharr-https.rule: Host(`dsp.${DOMAIN}`)
       traefik.http.routers.dispatcharr-https.entrypoints: https
+      traefik.http.routers.dispatcharr-https.priority: 10
       traefik.http.routers.dispatcharr-https.tls: true
       traefik.http.routers.dispatcharr-https.tls.certresolver: ${CERT_RESOLVER}
       traefik.http.routers.dispatcharr-https.service: dispatcharr
-      traefik.http.routers.dispatcharr-https.middlewares: crowdsec-bouncer
+      traefik.http.routers.dispatcharr-https.middlewares: dispatcharr-chain
+
+      # Internally replace designated paths
+      traefik.http.middlewares.dispatcharr-replacepaths.replacepathregex.regex: "^/{DISPATCHARR_PSK}/(.*)"
+      traefik.http.middlewares.dispatcharr-replacepaths.replacepathregex.replacement: "/$1"
+
+      # Chain middlewares: first check with crowdsec, then do path replacement
+      traefik.http.middlewares.dispatcharr-chain.chain.middlewares: crowdsec-bouncer, dispatcharr-replacepaths
 
       traefik.http.services.dispatcharr.loadbalancer.server.port: 9191
+
 
       # network policy
       whalewall.enabled: true
