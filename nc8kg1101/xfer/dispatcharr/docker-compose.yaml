@@ -44,7 +44,7 @@ services:
       traefik.http.routers.dispatcharr-https.middlewares: dispatcharr-chain
 
       # Internally replace designated paths
-      traefik.http.middlewares.dispatcharr-replacepaths.replacepathregex.regex: ^/{DISPATCHARR_PSK}/(.*)
+      traefik.http.middlewares.dispatcharr-replacepaths.replacepathregex.regex: ^/${DISPATCHARR_PSK}/(.*)
       traefik.http.middlewares.dispatcharr-replacepaths.replacepathregex.replacement: /$1
 
       # Chain middlewares: first check with crowdsec, then do path replacement
