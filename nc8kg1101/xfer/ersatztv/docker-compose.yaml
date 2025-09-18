@@ -77,6 +77,7 @@ services:
       - ersatztv_transcode:/transcode
       - /var/media/music_videos:/data/music_videos:ro
       - /var/media/other_videos:/data/other_videos:ro
+      - /var/media/tv:/data/tv:ro
     networks:
       - backend
 
