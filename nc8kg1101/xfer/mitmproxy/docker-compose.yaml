@@ -2,6 +2,7 @@ services:
   mitmproxy:
     # https://hub.docker.com/r/mitmproxy/mitmproxy
     image: mitmproxy/mitmproxy:12.1.2
+    command: mitmweb --web-host 0.0.0.0
     security_opt:
       - no-new-privileges=true
     container_name: mitmproxy
