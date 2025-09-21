@@ -2,11 +2,14 @@ services:
   mitmproxy:
     # https://hub.docker.com/r/mitmproxy/mitmproxy
     image: mitmproxy/mitmproxy:12.1.2
-    command: mitmweb --web-host 0.0.0.0
+    command: mitmweb --web-host 0.0.0.0 --set web_password=${MITMPROXY_WEB_PASSWORD} -s /addons/rewrite_xml.py
     security_opt:
       - no-new-privileges=true
     container_name: mitmproxy
     restart: unless-stopped
+    environment:
+      - ORX_PSK=${ORX_PSK}
+      - ORX_BASE=${ORX_BASE}
     labels:
       # logs collection
       logging: promtail
