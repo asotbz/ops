@@ -51,6 +51,9 @@ services:
           # reverse proxy
           - network: common_backend
             container: traefik
+          # forward proxy
+          - network: common_backend
+            container: mitmproxy
     logging:
       driver: json-file
       options:
@@ -60,6 +63,7 @@ services:
     volumes:
       - nzbhydra2_config:/config
       - nzbhydra2_downloads:/downloads
+      # mitmproxy CA cert is copied to /config/certificates: https://github.com/theotherp/nzbhydra2/wiki/SSL-verification-errors
     networks:
       - backend
 
