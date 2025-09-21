@@ -52,6 +52,9 @@ services:
           # reverse proxy
           - network: common_backend
             container: traefik
+          # forward proxy
+          - network: common_backend
+            container: mitmproxy
     logging:
       driver: json-file
       options:
@@ -60,6 +63,7 @@ services:
         tag: "{{.Name}}"
     volumes:
       - prowlarr_config:/config
+      - ./mitmproxy-ca-cert.pem:/etc/ssl/certs/mitmproxy-ca-cert.pem:ro
     networks:
       - backend
 
