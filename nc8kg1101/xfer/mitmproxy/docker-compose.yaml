@@ -59,6 +59,7 @@ services:
         tag: "{{.Name}}"
     volumes:
       - mitmproxy_data:/home/mitmproxy/.mitmproxy
+      - ./rewrite_xml.py:/addons/rewrite_xml.py:ro
     networks:
       - backend
 
