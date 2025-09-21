@@ -1,0 +1,65 @@
+services:
+  mitmproxy:
+    # https://hub.docker.com/r/mitmproxy/mitmproxy
+    image: mitmproxy/mitmproxy:12.1.2
+    security_opt:
+      - no-new-privileges=true
+    container_name: mitmproxy
+    restart: unless-stopped
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.mitmproxy-http.rule: Host(`mmp.${DOMAIN}`)
+      traefik.http.routers.mitmproxy-http.entrypoints: http
+      traefik.http.routers.mitmproxy-http.middlewares: redirect-https
+
+      # Direct all https requests to the service
+      traefik.http.routers.mitmproxy-https.rule: Host(`mmp.${DOMAIN}`)
+      traefik.http.routers.mitmproxy-https.entrypoints: https
+      traefik.http.routers.mitmproxy-https.tls: true
+      traefik.http.routers.mitmproxy-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.mitmproxy-https.service: mitmproxy
+      traefik.http.routers.mitmproxy-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.mitmproxy.loadbalancer.server.port: 8081
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 80
+              - 443
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+          # downstream services
+          - network: common_backend
+            container: nzbhydra2
+          - network: common_backend
+            container: prowlarr
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - mitmproxy_data:/home/mitmproxy/.mitmproxy
+    networks:
+      - backend
+
+volumes:
+  mitmproxy_data:
