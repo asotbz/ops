@@ -96,7 +96,7 @@ services:
       traefik.http.routers.openresty-https.service: openresty
       traefik.http.routers.openresty-https.middlewares: crowdsec-bouncer
 
-      traefik.http.services.openresty.loadbalancer.server.port: 80
+      traefik.http.services.openresty.loadbalancer.server.port: 8080
 
       # network policy
       whalewall.enabled: true
@@ -121,7 +121,7 @@ services:
         max-file: 1
         tag: "{{.Name}}"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
     networks:
       - backend
 
