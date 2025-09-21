@@ -66,5 +66,64 @@ services:
     networks:
       - backend
 
+  openresty:
+    # https://hub.docker.com/r/openresty/openresty
+    image: openresty/openresty:1.27.1.2-4-bullseye
+    security_opt:
+      - no-new-privileges=true
+    container_name: openresty
+    restart: unless-stopped
+    environment:
+      - ORX_PSK=${ORX_PSK}
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.openresty-http.rule: Host(`orx.${DOMAIN}`)
+      traefik.http.routers.openresty-http.entrypoints: http
+      traefik.http.routers.openresty-http.middlewares: redirect-https
+
+      # Direct all https requests to the service
+      traefik.http.routers.openresty-https.rule: Host(`orx.${DOMAIN}`)
+      traefik.http.routers.openresty-https.entrypoints: https
+      traefik.http.routers.openresty-https.tls: true
+      traefik.http.routers.openresty-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.openresty-https.service: openresty
+      traefik.http.routers.openresty-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.openresty.loadbalancer.server.port: 80
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 80
+              - 443
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - backend
+
 volumes:
   mitmproxy_data:
