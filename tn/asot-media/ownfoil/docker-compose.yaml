@@ -59,6 +59,7 @@ services:
         tag: "{{.Name}}"
     volumes:
       - ${GAMES_ROOT}:/games
+      - ${GAMES_ROOT}/static/NX-OFW1901-Atmos191-060925.zip:/app/static/NX-OFW1901-Atmos191-060925.zip:ro
       - ownfoil_config:/app/config
     networks:
       - backend
