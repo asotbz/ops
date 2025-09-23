@@ -1,6 +1,6 @@
 services:
   portainer:
-    image: portainer/agent:2.27.8
+    image: portainer/agent:2.33.1
     container_name: portainer-agent
     group_add:
       - ${DOCKER_GID}
@@ -8,7 +8,7 @@ services:
       - no-new-privileges=true
     restart: unless-stopped
     environment:
-      - COMPOSE_UNPACKER_IMAGE=jbruns/compose-unpacker:2.21.3-sops
+      - COMPOSE_UNPACKER_IMAGE=jbruns/compose-unpacker:2.33.1-sops
     labels:
       logging: promtail
       logging_jobname: containerlogs
