@@ -62,7 +62,7 @@ services:
               - 80
           # watchdog
           - network: common_backend
-            container: streammaster-watchdog
+            container: streamwatchdog
           # reverse proxy
           - network: common_backend
             container: traefik
@@ -80,9 +80,9 @@ services:
     networks:
       - backend
 
-  streammaster-watchdog:
-    image: sergeantpanda/streammasterwatchdog:1.1.3
-    container_name: streammaster-watchdog
+  streamwatchdog:
+    image: sergeantpanda/streamwatchdog:2.2.1
+    container_name: streamwatchdog
     user: ${XFER_UID}:${XFER_GID}
     security_opt:
       - no-new-privileges=true
@@ -90,6 +90,8 @@ services:
       - SERVER_URL=http://streammaster:7095
       - USERNAME=${STREAMMASTER_USERNAME}
       - PASSWORD=${STREAMMASTER_PASSWORD}
+      - ERROR_THRESHOLD=3
+      - MODULE=Stream_Master
       - TZ=${TZ}
     restart: unless-stopped
     labels:
