@@ -81,7 +81,7 @@ services:
       - backend
 
   streamwatchdog:
-    image: sergeantpanda/streamwatchdog:2.2.1
+    image: sergeantpanda/streamwatchdog:v2.2.1
     container_name: streamwatchdog
     user: ${XFER_UID}:${XFER_GID}
     security_opt:
