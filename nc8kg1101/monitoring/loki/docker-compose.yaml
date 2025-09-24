@@ -47,9 +47,8 @@ services:
           - network: common_backend
             container: promtail
           # reverse proxy
-          - network: common_frontend
+          - network: common_backend
             container: traefik
-
     logging:
       driver: json-file
       options:
