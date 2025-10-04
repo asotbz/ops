@@ -65,7 +65,7 @@ services:
       - backend
 
   audiobookrequest:
-    image: markbeep/audiobookrequest:1.7.0
+    image: markbeep/audiobookrequest:1.8.0
     container_name: audiobookrequest
     restart: unless-stopped
     user: ${BOOKS_UID}:${MEDIA_SHARED_GID}
