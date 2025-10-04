@@ -3,7 +3,7 @@ services:
     # https://redis.io/docs/latest/operate/oss_and_stack/install/install-stack/docker/
     # https://github.com/redis/docker-library-redis
     # https://hub.docker.com/_/redis/tags
-    image: redis:8.2.1-alpine
+    image: redis:8.2.2-alpine
     container_name: redis
     restart: unless-stopped
     user: ${ASOT_UID}:${ASOT_GID}
