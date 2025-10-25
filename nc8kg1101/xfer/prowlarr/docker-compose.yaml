@@ -2,7 +2,7 @@ services:
   prowlarr:
     # https://github.com/home-operations/containers/pkgs/container/prowlarr
     # https://github.com/prowlarr/prowlarr
-    image: ghcr.io/home-operations/prowlarr:2.1.2
+    image: ghcr.io/home-operations/prowlarr:2.1.5
     user: ${XFER_UID}:${XFER_GID}
     security_opt:
       - no-new-privileges=true
