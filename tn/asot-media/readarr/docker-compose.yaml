@@ -5,7 +5,6 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    user: "${BOOKS_UID}:${MEDIA_SHARED_GID}"
     labels:
       stack-back.volumes: true
       stack-back.volumes.include: "readarr_config"
