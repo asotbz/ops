@@ -13,3 +13,4 @@ include:
   - ./authentik-proxy/docker-compose.yaml
   - ./cwa/docker-compose.yaml
   - ./ownfoil/docker-compose.yaml
+  - ./readarr/docker-compose.yaml

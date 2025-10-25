@@ -1,0 +1,58 @@
+services:
+  readarr:
+    image: ghcr.io/pennydreadful/bookshelf:hardcover-v0.4.20.91
+    container_name: readarr
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: "${BOOKS_UID}:${MEDIA_SHARED_GID}"
+    labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "readarr_config"
+
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: asot-media
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.readarr-http.rule: Host(`rdr.${DOMAIN}`)
+      traefik.http.routers.readarr-http.entrypoints: http
+      traefik.http.routers.readarr-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.readarr-https.rule: Host(`rdr.${DOMAIN}`)
+      traefik.http.routers.readarr-https.entrypoints: https
+      traefik.http.routers.readarr-https.tls: true
+      traefik.http.routers.readarr-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.readarr-https.service: readarr
+      traefik.http.routers.readarr-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.readarr.loadbalancer.server.port: 8787
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - readarr_config:/config
