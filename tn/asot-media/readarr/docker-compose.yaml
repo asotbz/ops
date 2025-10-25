@@ -56,3 +56,6 @@ services:
         tag: "{{.Name}}"
     volumes:
       - readarr_config:/config
+
+volumes:
+  readarr_config:
