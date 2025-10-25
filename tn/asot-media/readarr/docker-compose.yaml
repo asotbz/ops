@@ -55,6 +55,8 @@ services:
         tag: "{{.Name}}"
     volumes:
       - readarr_config:/config
+    networks:
+      - backend
 
 volumes:
   readarr_config:
