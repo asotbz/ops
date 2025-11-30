@@ -1,6 +1,6 @@
 services:
   ersatztv:
-    image: jasongdove/ersatztv:v25.7.1
+    image: jasongdove/ersatztv:v25.9.0
     container_name: ersatztv
     restart: unless-stopped
     user: ${XFER_UID}:${XFER_GID}
