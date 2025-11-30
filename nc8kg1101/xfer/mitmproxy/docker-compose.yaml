@@ -1,7 +1,7 @@
 services:
   mitmproxy:
     # https://hub.docker.com/r/mitmproxy/mitmproxy
-    image: mitmproxy/mitmproxy:12.1.2
+    image: mitmproxy/mitmproxy:12.2.1
     command: mitmweb --web-host 0.0.0.0 --set web_password=${MITMPROXY_WEB_PASSWORD} -s /addons/rewrite_xml.py
     security_opt:
       - no-new-privileges=true
