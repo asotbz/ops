@@ -80,7 +80,7 @@ services:
       - backend
 
   calibre-web-automated-book-downloader:
-    image: ghcr.io/calibrain/calibre-web-automated-book-downloader:v0.3.1
+    image: ghcr.io/calibrain/calibre-web-automated-book-downloader:v0.4.0
     container_name: calibre-web-automated-book-downloader
     security_opt:
       - no-new-privileges=true
