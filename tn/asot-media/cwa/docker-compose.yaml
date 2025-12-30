@@ -145,3 +145,5 @@ services:
     
 volumes:
   calibre-web-automated_config:
+  cwa-downloader_config:
+
