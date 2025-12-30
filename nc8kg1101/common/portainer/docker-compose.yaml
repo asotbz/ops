@@ -1,6 +1,6 @@
 services:
   portainer:
-    image: portainer/agent:2.33.6
+    image: portainer/agent:2.37.0
     container_name: portainer-agent
     group_add:
       - ${DOCKER_GID}
