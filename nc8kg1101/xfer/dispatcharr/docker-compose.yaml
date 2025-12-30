@@ -1,7 +1,7 @@
 services:
   dispatcharr:
     # https://github.com/Dispatcharr/Dispatcharr
-    image: ghcr.io/dispatcharr/dispatcharr:0.14.0
+    image: ghcr.io/dispatcharr/dispatcharr:0.15.1
     security_opt:
       - no-new-privileges=true
     container_name: dispatcharr
