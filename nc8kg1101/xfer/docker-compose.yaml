@@ -9,6 +9,7 @@ networks:
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
+  - ./apprise/docker-compose.yaml
   - ./dispatcharr/docker-compose.yaml
   - ./ersatztv/docker-compose.yaml
   - ./mitmproxy/docker-compose.yaml
