@@ -54,6 +54,9 @@ services:
           # forward proxy
           - network: common_backend
             container: mitmproxy
+          # notifications
+          - network: common_backend
+            container: apprise
     logging:
       driver: json-file
       options:
