@@ -7,6 +7,10 @@ services:
       - no-new-privileges=true
     container_name: mitmproxy
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     environment:
       - ORX_PSK=${ORX_PSK}
       - ORX_BASE=${ORX_BASE}
