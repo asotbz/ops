@@ -2,7 +2,7 @@ services:
   outline:
     # https://docs.getoutline.com/s/hosting/doc/docker-7pfeLP5a8t
     # https://github.com/outline/outline
-    image: outlinewiki/outline:1.1.0
+    image: outlinewiki/outline:1.3.0
     container_name: outline
     restart: unless-stopped
     env_file: ./outline.env
