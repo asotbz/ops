@@ -108,7 +108,7 @@ services:
       traefik.http.routers.shelfmark-https.entrypoints: https
       traefik.http.routers.shelfmark-https.tls: true
       traefik.http.routers.shelfmark-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.shelfmark-https.service: cwd
+      traefik.http.routers.shelfmark-https.service: shelfmark
       traefik.http.routers.shelfmark-https.middlewares: shelfmark-chain
 
       traefik.http.middlewares.shelfmark-chain.chain.middlewares: crowdsec-bouncer,authentik
