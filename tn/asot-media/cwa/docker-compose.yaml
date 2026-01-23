@@ -143,6 +143,8 @@ services:
       - ${ZFS_POOL_ROOT_HDD}/media/audiobooks:/audiobooks
       - ${ZFS_POOL_ROOT_HDD}/media/tordl/cwd-books:/data/tordl/cwd-books
       - ${ZFS_POOL_ROOT_HDD}/media/tordl/cwd-audiobooks:/data/tordl/cwd-audiobooks
+      - ${ZFS_POOL_ROOT_HDD}/media/nzbdl/completed/Books:/data/nzbdl/completed/Books
+      - ${ZFS_POOL_ROOT_HDD}/media/nzbdl/completed/Audiobooks:/data/nzbdl/completed/Audiobooks
     networks:
       - backend
     
