@@ -79,9 +79,9 @@ services:
     networks:
       - backend
 
-  calibre-web-automated-book-downloader:
-    image: ghcr.io/calibrain/calibre-web-automated-book-downloader:v0.4.0
-    container_name: calibre-web-automated-book-downloader
+  shelfmark:
+    image: ghcr.io/calibrain/shelfmark:1.0.1
+    container_name: shelfmark
     security_opt:
       - no-new-privileges=true
     restart: unless-stopped
@@ -99,21 +99,21 @@ services:
       traefik.enable: true
 
       # Listen on http, but redirect all requests to https
-      traefik.http.routers.cwd-http.rule: Host(`cwd.${DOMAIN}`)
-      traefik.http.routers.cwd-http.entrypoints: http
-      traefik.http.routers.cwd-http.middlewares: redirect-https
+      traefik.http.routers.shelfmark-http.rule: Host(`cwd.${DOMAIN}`)
+      traefik.http.routers.shelfmark-http.entrypoints: http
+      traefik.http.routers.shelfmark-http.middlewares: redirect-https
 
       # Direct all https requests to the service, checking with crowdsec first
-      traefik.http.routers.cwd-https.rule: Host(`cwd.${DOMAIN}`)
-      traefik.http.routers.cwd-https.entrypoints: https
-      traefik.http.routers.cwd-https.tls: true
-      traefik.http.routers.cwd-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.cwd-https.service: cwd
-      traefik.http.routers.cwd-https.middlewares: cwd-chain
+      traefik.http.routers.shelfmark-https.rule: Host(`cwd.${DOMAIN}`)
+      traefik.http.routers.shelfmark-https.entrypoints: https
+      traefik.http.routers.shelfmark-https.tls: true
+      traefik.http.routers.shelfmark-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.shelfmark-https.service: cwd
+      traefik.http.routers.shelfmark-https.middlewares: shelfmark-chain
 
-      traefik.http.middlewares.cwd-chain.chain.middlewares: crowdsec-bouncer,authentik
+      traefik.http.middlewares.shelfmark-chain.chain.middlewares: crowdsec-bouncer,authentik
 
-      traefik.http.services.cwd.loadbalancer.server.port: 8084
+      traefik.http.services.shelfmark.loadbalancer.server.port: 8084
 
       # network policy
       whalewall.enabled: true
