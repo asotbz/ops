@@ -1,0 +1,48 @@
+services:
+  fuzzbin:
+    # https://github.com/asotbz/Fuzzbin
+    image: ghcr.io/asotbz/fuzzbin:0.2.1
+    security_opt:
+      - no-new-privileges=true
+    container_name: fuzzbin
+    restart: unless-stopped
+    labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "fuzzbin_config"
+
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: xfer
+
+      traefik.enable: true
+      
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.fuzzbin-http.rule: Host(`fzb.${DOMAIN}`)
+      traefik.http.routers.fuzzbin-http.entrypoints: http
+      traefik.http.routers.fuzzbin-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.fuzzbin-https.rule: Host(`fzb.${DOMAIN}`)
+      traefik.http.routers.fuzzbin-https.entrypoints: https
+      traefik.http.routers.fuzzbin-https.tls: true
+      traefik.http.routers.fuzzbin-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.fuzzbin-https.service: fuzzbin
+      traefik.http.routers.fuzzbin-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.fuzzbin.loadbalancer.server.port: 8000
+
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - fuzzbin_config:/config
+      - /var/media/fuzzbin_music_videos:/music_videos
+    networks:
+      - backend
+
+volumes:
+  fuzzbin_config:
