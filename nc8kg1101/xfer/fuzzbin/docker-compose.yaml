@@ -1,11 +1,14 @@
 services:
   fuzzbin:
     # https://github.com/asotbz/Fuzzbin
-    image: ghcr.io/asotbz/fuzzbin:0.3.1
+    image: ghcr.io/asotbz/fuzzbin:0.3.2
     security_opt:
       - no-new-privileges=true
     container_name: fuzzbin
     restart: unless-stopped
+    environment:
+      # DEBUG: profile memory usage. 
+      - FUZZBIN_PROFILE_MEMORY=1
     labels:
       stack-back.volumes: true
       stack-back.volumes.include: "fuzzbin_config"
