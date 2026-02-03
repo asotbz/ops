@@ -1,7 +1,7 @@
 services:
   fuzzbin:
     # https://github.com/asotbz/Fuzzbin
-    image: ghcr.io/asotbz/fuzzbin:0.3.2
+    image: ghcr.io/asotbz/fuzzbin:0.3.3
     security_opt:
       - no-new-privileges=true
     container_name: fuzzbin
