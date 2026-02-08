@@ -1,14 +1,11 @@
 services:
   fuzzbin:
     # https://github.com/asotbz/Fuzzbin
-    image: ghcr.io/asotbz/fuzzbin:0.3.3
+    image: ghcr.io/asotbz/fuzzbin:0.4.0
     security_opt:
       - no-new-privileges=true
     container_name: fuzzbin
     restart: unless-stopped
-    environment:
-      # DEBUG: profile memory usage. 
-      - FUZZBIN_PROFILE_MEMORY=1
     labels:
       stack-back.volumes: true
       stack-back.volumes.include: "fuzzbin_config"
@@ -34,6 +31,20 @@ services:
       traefik.http.routers.fuzzbin-https.middlewares: crowdsec-bouncer
 
       traefik.http.services.fuzzbin.loadbalancer.server.port: 8000
+
+      # OIDC
+      traefik.http.routers.fuzzbin-oidc.rule: Host(`fzb.${DOMAIN}`) && PathPrefix(`/auth/oidc`)
+      traefik.http.routers.fuzzbin-oidc.entrypoints: https
+      traefik.http.routers.fuzzbin-oidc.tls: true
+      traefik.http.routers.fuzzbin-oidc.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.fuzzbin-oidc.priority: 200
+      traefik.http.routers.fuzzbin-oidc.service: fuzzbin
+      traefik.http.routers.fuzzbin-oidc.middlewares: fuzzbin-oidc-ratelimit
+
+      # Throttle per source IP
+      traefik.http.middlewares.fuzzbin-oidc-ratelimit.rateLimit.average: 5
+      traefik.http.middlewares.fuzzbin-oidc-ratelimit.rateLimit.period: 1s
+      traefik.http.middlewares.fuzzbin-oidc-ratelimit.rateLimit.burst: 20
 
     logging:
       driver: json-file
