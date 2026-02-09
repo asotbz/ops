@@ -13,6 +13,7 @@ include:
   - ./dispatcharr/docker-compose.yaml
   - ./ersatztv/docker-compose.yaml
   - ./fuzzbin/docker-compose.yaml
+  - ./gluetun/docker-compose.yaml
   - ./mitmproxy/docker-compose.yaml
   - ./nzbhydra2/docker-compose.yaml
   - ./prowlarr/docker-compose.yaml

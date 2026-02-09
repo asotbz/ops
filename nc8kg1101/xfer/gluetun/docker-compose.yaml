@@ -13,6 +13,38 @@ services:
       - SERVER_COUNTRIES=${GLUETUN_COUNTRIES}
       - SERVER_CITIES=${GLUETUN_CITIES}
     labels:
+      traefik.enable: true
+      
+      # -- Fuzzbin
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.fuzzbin-http.rule: Host(`fzb.${DOMAIN}`)
+      traefik.http.routers.fuzzbin-http.entrypoints: http
+      traefik.http.routers.fuzzbin-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.fuzzbin-https.rule: Host(`fzb.${DOMAIN}`)
+      traefik.http.routers.fuzzbin-https.entrypoints: https
+      traefik.http.routers.fuzzbin-https.tls: true
+      traefik.http.routers.fuzzbin-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.fuzzbin-https.service: fuzzbin
+      traefik.http.routers.fuzzbin-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.fuzzbin.loadbalancer.server.port: 8000
+
+      # OIDC
+      traefik.http.routers.fuzzbin-oidc.rule: Host(`fzb.${DOMAIN}`) && PathPrefix(`/auth/oidc`)
+      traefik.http.routers.fuzzbin-oidc.entrypoints: https
+      traefik.http.routers.fuzzbin-oidc.tls: true
+      traefik.http.routers.fuzzbin-oidc.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.fuzzbin-oidc.priority: 200
+      traefik.http.routers.fuzzbin-oidc.service: fuzzbin
+      traefik.http.routers.fuzzbin-oidc.middlewares: fuzzbin-oidc-ratelimit
+
+      # Throttle per source IP
+      traefik.http.middlewares.fuzzbin-oidc-ratelimit.rateLimit.average: 5
+      traefik.http.middlewares.fuzzbin-oidc-ratelimit.rateLimit.period: 1s
+      traefik.http.middlewares.fuzzbin-oidc-ratelimit.rateLimit.burst: 20
+
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
