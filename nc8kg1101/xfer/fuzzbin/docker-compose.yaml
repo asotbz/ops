@@ -23,7 +23,7 @@ services:
         tag: "{{.Name}}"
     volumes:
       - fuzzbin_config:/config
-      - /var/media/fuzzbin_music_videos:/music_videos
+      - /var/media/music_videos:/music_videos
     network_mode: service:gluetun
     
 volumes:
