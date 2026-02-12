@@ -1,7 +1,7 @@
 services:
   ownfoil:
     # https://hub.docker.com/r/a1ex4/ownfoil/tags
-    image: a1ex4/ownfoil:2.2.0
+    image: a1ex4/ownfoil:2.2.1
     container_name: ownfoil
     restart: unless-stopped
     environment:
