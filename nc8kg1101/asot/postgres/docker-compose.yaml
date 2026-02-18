@@ -2,7 +2,7 @@ services:
   postgresql:
     # https://github.com/docker-library/docs/blob/master/postgres/README.md
     # https://hub.docker.com/_/postgres/
-    image: postgres:17.7-alpine
+    image: postgres:18.2-alpine
     container_name: postgresql
     restart: unless-stopped
     env_file: ./postgres.env
