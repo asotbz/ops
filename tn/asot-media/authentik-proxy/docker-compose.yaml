@@ -1,6 +1,6 @@
 services:
   authentik-proxy:
-    image: ghcr.io/goauthentik/proxy:2026.2.1
+    image: ghcr.io/goauthentik/proxy:2026.2.2
     container_name: authentik-proxy
     restart: unless-stopped
     security_opt:
