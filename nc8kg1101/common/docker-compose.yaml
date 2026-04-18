@@ -50,4 +50,3 @@ include:
   - ./nginx/docker-compose.yaml
   - ./portainer/docker-compose.yaml
   - ./traefik/docker-compose.yaml
-  - ./whalewall/docker-compose.yaml
