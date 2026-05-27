@@ -1,0 +1,62 @@
+services:
+  loki:
+    image: grafana/loki:3.7.1
+    container_name: loki
+    user: ${MONITORING_UID}:${MONITORING_GID}
+    security_opt:
+      - no-new-privileges=true
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yaml
+    labels:
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: monitoring
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.loki-http.rule: Host(`loki.${DOMAIN}`)
+      traefik.http.routers.loki-http.entrypoints: http
+      traefik.http.routers.loki-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.loki-https.rule: Host(`loki.${DOMAIN}`)
+      traefik.http.routers.loki-https.entrypoints: https
+      traefik.http.routers.loki-https.tls: true
+      traefik.http.routers.loki-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.loki-https.service: loki
+      traefik.http.routers.loki-https.middlewares: loki-chain
+
+      traefik.http.middlewares.loki-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH}
+      traefik.http.middlewares.loki-chain.chain.middlewares: crowdsec-bouncer,loki-auth
+
+      traefik.http.services.loki.loadbalancer.server.port: 3100
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        output:
+          # prometheus, grafana, alertmanager, promtail: data collection
+          - network: common_backend
+            container: prometheus
+          - network: common_backend
+            container: grafana
+          - network: common_backend
+            container: alertmanager
+          - network: common_backend
+            container: promtail
+          # reverse proxy
+          - network: common_backend
+            container: traefik
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml:ro
+      - ./rules.yaml:/etc/loki/rules/fake/loki-rules.yml:ro
+    networks:
+      - backend

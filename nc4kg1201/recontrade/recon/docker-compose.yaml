@@ -1,0 +1,99 @@
+services:
+  recon:
+    image: ghcr.io/jbruns/recon:0.19.3
+    container_name: recon
+    security_opt:
+      - no-new-privileges=true
+    restart: unless-stopped
+    environment:
+      TRADE_ORCHESTRATOR_ENCRYPTION_KEY: "${TRADE_ORCHESTRATOR_ENCRYPTION_KEY}"
+      ORCHESTRATOR_API_KEY: "${ORCHESTRATOR_API_KEY}"
+      RECON_BOT_TOKEN: "${RECON_BOT_TOKEN}"
+      SCHWAB_APP_KEY: "${SCHWAB_APP_KEY:-}"
+      SCHWAB_APP_SECRET: "${SCHWAB_APP_SECRET:-}"
+      SCHWAB_CALLBACK_URL: "${SCHWAB_CALLBACK_URL:-https://127.0.0.1:8443/callback/schwab}"
+      DISCORD_CLIENT_ID: "${DISCORD_CLIENT_ID:-}"
+      DISCORD_CLIENT_SECRET: "${DISCORD_CLIENT_SECRET:-}"
+      DISCORD_REDIRECT_URI: "${DISCORD_REDIRECT_URI:-https://127.0.0.1:8443/callback/discord}"
+      DISCORD_REQUIRED_SERVER_ID: "${DISCORD_REQUIRED_SERVER_ID:-}"
+      DISCORD_REQUIRED_ROLE_IDS: "${DISCORD_REQUIRED_ROLE_IDS:-}"
+      MOCK_MODE: "${MOCK_MODE:-false}"
+      ORCHESTRATOR_LOG_LEVEL: "${ORCHESTRATOR_LOG_LEVEL:-INFO}"
+      ORDER_POLLER_INTERVAL: "${ORDER_POLLER_INTERVAL:-10}"
+      LLM_ENABLED: "${LLM_ENABLED:-false}"
+      LLM_API_KEY: "${LLM_API_KEY:-}"
+      LLM_MODEL: "${LLM_MODEL:-}"
+      WIN_RATE_ENABLED: "${WIN_RATE_ENABLED:-false}"
+      DCE_CHANNEL_ID: "${DCE_CHANNEL_ID:-}"
+      WIN_RATE_INTERVAL: "${WIN_RATE_INTERVAL:-21600}"
+      MARKET_UPDATES_ENABLED: "${MARKET_UPDATES_ENABLED:-false}"
+      MARKET_UPDATES_CHANNEL_ID: "${MARKET_UPDATES_CHANNEL_ID:-}"
+      MARKET_UPDATES_TARGET_CHANNEL_ID: "${MARKET_UPDATES_TARGET_CHANNEL_ID:-}"
+      FEED_API_KEY: "${FEED_API_KEY:-}"
+
+    labels:
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: recon
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.recon-http.rule: Host(`${DOMAIN}`)
+      traefik.http.routers.recon-http.entrypoints: http
+      traefik.http.routers.recon-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.recon-https.rule: Host(`${DOMAIN}`)
+      traefik.http.routers.recon-https.entrypoints: https
+      traefik.http.routers.recon-https.tls: true
+      traefik.http.routers.recon-https.tls.certresolver: letsencrypt
+      traefik.http.routers.recon-https.service: recon
+      traefik.http.routers.recon-https.middlewares: crowdsec-bouncer
+
+      # Deny anonymous access to specific paths
+      traefik.http.routers.recon-denypaths.rule: Host(`${DOMAIN}`) && Path(`/docs`)
+      traefik.http.routers.recon-denypaths.entrypoints: https
+      traefik.http.routers.recon-denypaths.priority: 50
+      traefik.http.routers.recon-denypaths.tls: true
+      traefik.http.routers.recon-denypaths.tls.certresolver: letsencrypt
+      traefik.http.routers.recon-denypaths.service: noop@internal
+
+      traefik.http.services.recon.loadbalancer.server.port: 8000
+
+      # network policy
+      whalewall.enabled: true
+      whalewall.rules: |
+        mapped_ports:
+          external:
+            allow: true
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTP/S
+          - proto: tcp
+            dst_ports:
+              - 443
+              - 80
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+
+    volumes:
+      - recon_data:/app/data
+    networks:
+      - backend
+
+volumes:
+  recon_data:
+
+# When referring to a network called 'backend', we mean the common stack's backend network
+networks:
+  backend:
+    name: common_backend
+    external: true
