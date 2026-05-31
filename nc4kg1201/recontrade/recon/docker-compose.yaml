@@ -1,6 +1,6 @@
 services:
   recon:
-    image: ghcr.io/jbruns/recon:0.19.3
+    image: ghcr.io/jbruns/recon:0.20.0
     container_name: recon
     security_opt:
       - no-new-privileges=true
@@ -30,8 +30,16 @@ services:
       MARKET_UPDATES_CHANNEL_ID: "${MARKET_UPDATES_CHANNEL_ID:-}"
       MARKET_UPDATES_TARGET_CHANNEL_ID: "${MARKET_UPDATES_TARGET_CHANNEL_ID:-}"
       FEED_API_KEY: "${FEED_API_KEY:-}"
-
+      ANALYSIS_ENABLED: "${ANALYSIS_ENABLED:-false}"
+      ANALYSIS_CHANNEL_ID: "${ANALYSIS_CHANNEL_ID:-}"
+      SETUP_ANALYZER_API_KEY: "${SETUP_ANALYZER_API_KEY:-}"
+      ALPACA_API_KEY: "${ALPACA_API_KEY:-}"
+      ALPACA_API_SECRET: "${ALPACA_API_SECRET:-}"
+      
     labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "recon_data"
+
       logging: promtail
       logging_jobname: containerlogs
       stackname: recon
@@ -61,22 +69,6 @@ services:
 
       traefik.http.services.recon.loadbalancer.server.port: 8000
 
-      # network policy
-      whalewall.enabled: true
-      whalewall.rules: |
-        mapped_ports:
-          external:
-            allow: true
-        output:
-          # DNS
-          - proto: udp
-            dst_ports:
-              - 53
-          # HTTP/S
-          - proto: tcp
-            dst_ports:
-              - 443
-              - 80
     logging:
       driver: json-file
       options:
@@ -92,7 +84,6 @@ services:
 volumes:
   recon_data:
 
-# When referring to a network called 'backend', we mean the common stack's backend network
 networks:
   backend:
     name: common_backend
