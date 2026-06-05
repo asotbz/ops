@@ -80,7 +80,7 @@ services:
       - backend
 
   shelfmark:
-    image: ghcr.io/calibrain/shelfmark:v1.2.1
+    image: ghcr.io/calibrain/shelfmark:v1.3.0
     container_name: shelfmark
     security_opt:
       - no-new-privileges=true
