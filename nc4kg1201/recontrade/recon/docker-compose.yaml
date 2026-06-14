@@ -1,6 +1,6 @@
 services:
   recon:
-    image: ghcr.io/jbruns/recon:0.20.4
+    image: ghcr.io/jbruns/recon:0.21.0
     container_name: recon
     security_opt:
       - no-new-privileges=true
@@ -24,7 +24,7 @@ services:
       LLM_API_KEY: "${LLM_API_KEY:-}"
       LLM_MODEL: "${LLM_MODEL:-}"
       WIN_RATE_ENABLED: "${WIN_RATE_ENABLED:-false}"
-      DCE_CHANNEL_ID: "${DCE_CHANNEL_ID:-}"
+      WIN_RATE_CHANNELS: "${WIN_RATE_CHANNELS:-}"
       WIN_RATE_INTERVAL: "${WIN_RATE_INTERVAL:-21600}"
       MARKET_UPDATES_ENABLED: "${MARKET_UPDATES_ENABLED:-false}"
       MARKET_UPDATES_CHANNEL_ID: "${MARKET_UPDATES_CHANNEL_ID:-}"
