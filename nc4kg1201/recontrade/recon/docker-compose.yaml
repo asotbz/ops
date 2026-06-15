@@ -36,6 +36,7 @@ services:
       ALPACA_API_KEY: "${ALPACA_API_KEY:-}"
       ALPACA_API_SECRET: "${ALPACA_API_SECRET:-}"
       PROVIDER_TIERS: "${PROVIDER_TIERS:-}"
+      DAH_ORCHESTRATOR_DISCORD_ID: "${DAH_ORCHESTRATOR_DISCORD_ID:-}"
       
     labels:
       stack-back.volumes: true
