@@ -35,6 +35,7 @@ services:
       SETUP_ANALYZER_API_KEY: "${SETUP_ANALYZER_API_KEY:-}"
       ALPACA_API_KEY: "${ALPACA_API_KEY:-}"
       ALPACA_API_SECRET: "${ALPACA_API_SECRET:-}"
+      PROVIDER_TIERS: "${PROVIDER_TIERS:-}"
       
     labels:
       stack-back.volumes: true
