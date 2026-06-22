@@ -1,6 +1,6 @@
 services:
   recon:
-    image: ghcr.io/jbruns/recon:0.24.1
+    image: ghcr.io/jbruns/recon:0.26.0
     container_name: recon
     security_opt:
       - no-new-privileges=true
@@ -37,6 +37,14 @@ services:
       ALPACA_API_SECRET: "${ALPACA_API_SECRET:-}"
       PROVIDER_TIERS: "${PROVIDER_TIERS:-}"
       DAH_ORCHESTRATOR_DISCORD_ID: "${DAH_ORCHESTRATOR_DISCORD_ID:-}"
+      BACKTEST_SCHEDULE_ENABLED: "${BACKTEST_SCHEDULE_ENABLED:-false}"
+      BACKTEST_SCHEDULE_DAY: "${BACKTEST_SCHEDULE_DAY:-sunday}"
+      BACKTEST_SCHEDULE_TIME: "${BACKTEST_SCHEDULE_TIME:-08:00}"
+      BACKTEST_CHANNEL_ID: "${BACKTEST_CHANNEL_ID:-}"
+      BACKTEST_ORCHESTRATOR_URL: "${BACKTEST_ORCHESTRATOR_URL:-http://localhost:8000}"
+      BACKTEST_WEEKLY_CONFIG: "${BACKTEST_WEEKLY_CONFIG:-/app/data/backtester/config.weekly.yaml}"
+      BACKTEST_OUTPUT_DIR: "${BACKTEST_OUTPUT_DIR:-/app/data/backtester/runs}"
+      BACKTEST_EQUITIES: "${BACKTEST_EQUITIES:-100000,50000}"
       
     labels:
       stack-back.volumes: true
