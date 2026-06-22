@@ -45,6 +45,7 @@ services:
       BACKTEST_WEEKLY_CONFIG: "${BACKTEST_WEEKLY_CONFIG:-/app/data/backtester/config.weekly.yaml}"
       BACKTEST_OUTPUT_DIR: "${BACKTEST_OUTPUT_DIR:-/app/data/backtester/runs}"
       BACKTEST_EQUITIES: "${BACKTEST_EQUITIES:-100000,50000}"
+      BACKTEST_WORKERS: "${BACKTEST_WORKERS:-8}"
       
     labels:
       stack-back.volumes: true
