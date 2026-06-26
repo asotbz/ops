@@ -1,6 +1,6 @@
 services:
   recon:
-    image: ghcr.io/jbruns/recon:0.26.4
+    image: ghcr.io/jbruns/recon:0.27.0
     container_name: recon
     security_opt:
       - no-new-privileges=true
