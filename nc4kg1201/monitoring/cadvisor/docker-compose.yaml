@@ -33,6 +33,10 @@ services:
     volumes:
       # Adjusted to enable specific metrics above
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Required when Docker uses the containerd snapshotter (storage driver
+      # "overlayfs"): cAdvisor's docker factory talks to containerd directly.
+      # Harmless on overlay2 hosts, where cAdvisor never dials this socket.
+      - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
       - /sys:/sys:ro
       - /proc:/rootfs/proc:ro
       - /dev/disk:/dev/disk:ro
