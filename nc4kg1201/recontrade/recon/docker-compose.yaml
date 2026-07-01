@@ -1,6 +1,6 @@
 services:
   recon:
-    image: ghcr.io/jbruns/recon:0.28.0
+    image: ghcr.io/jbruns/recon:0.29.0
     container_name: recon
     security_opt:
       - no-new-privileges=true
@@ -46,6 +46,7 @@ services:
       BACKTEST_OUTPUT_DIR: "${BACKTEST_OUTPUT_DIR:-/app/data/backtester/runs}"
       BACKTEST_EQUITIES: "${BACKTEST_EQUITIES:-100000,50000}"
       BACKTEST_WORKERS: "${BACKTEST_WORKERS:-8}"
+      MARKET_CAPTURE_ENABLED: "${MARKET_CAPTURE_ENABLED:-false}"
       
     labels:
       stack-back.volumes: true
