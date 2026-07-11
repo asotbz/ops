@@ -23,7 +23,9 @@
     {
       "customType": "regex",
       "description": "Use custom datasource for portainer-ee to only track LTS releases",
-      "fileMatch": ["(^|/)docker-compose\\.ya?ml$"],
+      "managerFilePatterns": [
+        "/(^|/)docker-compose\\.ya?ml$/"
+      ],
       "matchStrings": [
         "image:\\s*portainer/portainer-ee:(?<currentValue>[\\d.]+)"
       ],
