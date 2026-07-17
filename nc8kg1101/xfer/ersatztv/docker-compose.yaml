@@ -1,6 +1,6 @@
 services:
   ersatztv:
-    image: jasongdove/ersatztv:v26.3.0
+    image: ghcr.io/ersatztv/legacy:v26.6.0
     container_name: ersatztv
     restart: unless-stopped
     user: ${XFER_UID}:${XFER_GID}
