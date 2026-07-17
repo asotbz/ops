@@ -72,7 +72,7 @@ services:
 
   openresty:
     # https://hub.docker.com/r/openresty/openresty
-    image: openresty/openresty:1.27.1.2-4-bullseye
+    image: openresty/openresty:1.29.2.3-4-bullseye
     security_opt:
       - no-new-privileges=true
     container_name: openresty
