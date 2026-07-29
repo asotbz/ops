@@ -1,6 +1,6 @@
 services:
   recon:
-    image: ghcr.io/jbruns/recon:0.33.3
+    image: ghcr.io/jbruns/recon:0.34.0
     container_name: recon
     security_opt:
       - no-new-privileges=true
@@ -48,6 +48,7 @@ services:
       BACKTEST_WORKERS: "${BACKTEST_WORKERS:-8}"
       MARKET_CAPTURE_ENABLED: "${MARKET_CAPTURE_ENABLED:-false}"
       MARKET_CAPTURE_SURFACE_ENABLED: "${MARKET_CAPTURE_SURFACE_ENABLED:-false}"
+      MARKET_CAPTURE_OI_REFERENCE_ENABLED: "${MARKET_CAPTURE_OI_REFERENCE_ENABLED:-false}"
       
     labels:
       stack-back.volumes: true
