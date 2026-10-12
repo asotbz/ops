@@ -5,6 +5,8 @@ services:
     security_opt:
       - no-new-privileges=true
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
     environment:
       TRADE_ORCHESTRATOR_ENCRYPTION_KEY: "${TRADE_ORCHESTRATOR_ENCRYPTION_KEY}"
       ORCHESTRATOR_API_KEY: "${ORCHESTRATOR_API_KEY}"
@@ -59,7 +61,7 @@ services:
       logging_jobname: containerlogs
       stackname: recon
 
-      traefik.enable: true
+      traefik.enable: false
 
       # Listen on http, but redirect all requests to https
       traefik.http.routers.recon-http.rule: Host(`${DOMAIN}`)
