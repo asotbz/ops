@@ -21,6 +21,7 @@ services:
       stackname: asot-media
 
       traefik.enable: true
+      traefik.docker.network: proxy
 
       # Listen on http, but redirect all requests to https
       traefik.http.routers.cwa-http.rule: Host(`cwa.${DOMAIN}`)
@@ -45,27 +46,6 @@ services:
       traefik.http.services.cwa.loadbalancer.server.port: 8083
 
       traefik.http.middlewares.cwa-chain.chain.middlewares: crowdsec-bouncer,authentik
-
-      # network policy
-      whalewall.enabled: true
-      whalewall.rules: |
-        output:
-          # DNS
-          - proto: udp
-            dst_ports:
-              - 53
-          # HTTP/S
-          - proto: tcp
-            dst_ports:
-              - 80
-              - 443
-          # SMTP
-          - proto: tcp
-            dst_ports:
-              - 587
-          # reverse proxy
-          - network: common_backend
-            container: traefik
     logging:
       driver: json-file
       options:
@@ -77,7 +57,8 @@ services:
       - ${ZFS_POOL_ROOT_HDD}/media/cwa-book-ingest:/cwa-book-ingest
       - ${ZFS_POOL_ROOT_HDD}/media/books:/calibre-library
     networks:
-      - backend
+      - default
+      - proxy
 
   shelfmark:
     image: ghcr.io/calibrain/shelfmark:v1.4.0
@@ -97,6 +78,7 @@ services:
       stackname: asot-media
 
       traefik.enable: true
+      traefik.docker.network: proxy
 
       # Listen on http, but redirect all requests to https
       traefik.http.routers.shelfmark-http.rule: Host(`cwd.${DOMAIN}`)
@@ -114,23 +96,6 @@ services:
       traefik.http.middlewares.shelfmark-chain.chain.middlewares: crowdsec-bouncer,authentik
 
       traefik.http.services.shelfmark.loadbalancer.server.port: 8084
-
-      # network policy
-      whalewall.enabled: true
-      whalewall.rules: |
-        output:
-          # DNS
-          - proto: udp
-            dst_ports:
-              - 53
-          # HTTP/S
-          - proto: tcp
-            dst_ports:
-              - 80
-              - 443
-          # reverse proxy
-          - network: common_backend
-            container: traefik
     logging:
       driver: json-file
       options:
@@ -146,7 +111,8 @@ services:
       - ${ZFS_POOL_ROOT_HDD}/media/nzbdl/completed/Books:/data/nzbdl/completed/Books
       - ${ZFS_POOL_ROOT_HDD}/media/nzbdl/completed/Audiobooks:/data/nzbdl/completed/Audiobooks
     networks:
-      - backend
+      - default
+      - proxy
     
 volumes:
   calibre-web-automated_config:

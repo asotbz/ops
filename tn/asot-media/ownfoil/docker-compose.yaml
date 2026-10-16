@@ -19,6 +19,7 @@ services:
       stackname: asot-media
 
       traefik.enable: true
+      traefik.docker.network: proxy
 
       # Listen on http, but redirect all requests to https
       traefik.http.routers.ownfoil-http.rule: Host(`hnx.${DOMAIN}`)
@@ -34,23 +35,6 @@ services:
       traefik.http.routers.ownfoil-https.middlewares: crowdsec-bouncer
 
       traefik.http.services.ownfoil.loadbalancer.server.port: 8465
-
-      # network policy
-      whalewall.enabled: true
-      whalewall.rules: |
-        output:
-          # DNS
-          - proto: udp
-            dst_ports:
-              - 53
-          # HTTP/S
-          - proto: tcp
-            dst_ports:
-              - 443
-              - 80
-          # reverse proxy
-          - network: common_backend
-            container: traefik
     logging:
       driver: json-file
       options:
@@ -62,7 +46,8 @@ services:
       - ${GAMES_ROOT}/static/NX-OFW1901-Atmos191-060925.zip:/app/static/NX-OFW1901-Atmos191-060925.zip:ro
       - ownfoil_config:/app/config
     networks:
-      - backend
+      - default
+      - proxy
 
 volumes:
   ownfoil_config:
