@@ -28,7 +28,8 @@ services:
       traefik.http.routers.loki-https.service: loki
       traefik.http.routers.loki-https.middlewares: loki-chain
 
-      traefik.http.middlewares.loki-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH}
+      # grafana: a read-only datasource consumer, with its own credential.
+      traefik.http.middlewares.loki-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH},grafana:${LOKI_GRAFANA_PASSWORD_HASH}
       traefik.http.middlewares.loki-chain.chain.middlewares: crowdsec-bouncer,loki-auth
 
       traefik.http.services.loki.loadbalancer.server.port: 3100
