@@ -10,6 +10,8 @@ services:
       AUTHENTIK_INSECURE: "false"
       AUTHENTIK_TOKEN: ${AUTHENTIK_TOKEN}
     labels:
+      # Boot order, see jbruns/home-ops ADR-0003 (0 edge, 1 dependencies, 2 Exposed Services, 3 sidecars)
+      startup-order: "1"
       traefik.enable: true
       traefik.docker.network: proxy
       

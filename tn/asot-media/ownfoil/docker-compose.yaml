@@ -4,6 +4,13 @@ services:
     image: a1ex4/ownfoil:2.3.0
     container_name: ownfoil
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8465/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
     environment:
       # https://github.com/a1ex4/ownfoil#docker-compose
       - PUID=${MEDIA_UID}
@@ -13,6 +20,8 @@ services:
       - USER_GUEST_NAME=${HINOX_USER}
       - USER_GUEST_PASSWORD=${HINOX_PASSWORD}
     labels:
+      # Boot order, see jbruns/home-ops ADR-0003 (0 edge, 1 dependencies, 2 Exposed Services, 3 sidecars)
+      startup-order: "2"
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
