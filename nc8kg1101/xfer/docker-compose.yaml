@@ -16,5 +16,6 @@ include:
   - ./gluetun/docker-compose.yaml
   - ./mitmproxy/docker-compose.yaml
   - ./nzbhydra2/docker-compose.yaml
+  - ./nzbhydra2-exporter/docker-compose.yaml
   - ./prowlarr/docker-compose.yaml
 
