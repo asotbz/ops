@@ -22,10 +22,9 @@ services:
     labels:
       # Boot order, see jbruns/home-ops ADR-0003 (0 edge, 1 dependencies, 2 Exposed Services, 3 sidecars)
       startup-order: "2"
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot-media
+      # Monitoring: Tier and Probes, see jbruns/home-ops GLOSSARY.md (Probe, Uptime)
+      tier: warning
+      probe.url: https://hnx.${DOMAIN}/login
 
       traefik.enable: true
       traefik.docker.network: proxy
@@ -47,8 +46,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: 1m
-        max-file: 1
+        max-size: 10m
+        max-file: "3"
         tag: "{{.Name}}"
     volumes:
       - ${GAMES_ROOT}:/games

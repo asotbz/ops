@@ -17,10 +17,10 @@ services:
       stack-back.volumes: true
       stack-back.volumes.include: "calibre-web-automated_config"
 
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot-media
+      # Monitoring: Tier and Probes, see jbruns/home-ops GLOSSARY.md (Probe, Uptime)
+      tier: warning
+      probe.url: https://cwa.${DOMAIN}/health
+      probe.idp_url: https://cwa.${DOMAIN}/
 
       traefik.enable: true
       traefik.docker.network: proxy
@@ -37,6 +37,14 @@ services:
       traefik.http.routers.cwa-opds.tls.certresolver: ${CERT_RESOLVER}
       traefik.http.routers.cwa-opds.service: cwa
       traefik.http.routers.cwa-opds.middlewares: crowdsec-bouncer
+
+      # Unauthenticated health path for the Probe; everything else stays behind Authentik
+      traefik.http.routers.cwa-health.rule: Host(`cwa.${DOMAIN}`) && Path(`/health`)
+      traefik.http.routers.cwa-health.entrypoints: https
+      traefik.http.routers.cwa-health.tls: true
+      traefik.http.routers.cwa-health.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.cwa-health.service: cwa
+      traefik.http.routers.cwa-health.middlewares: crowdsec-bouncer
       
       traefik.http.routers.cwa-https.rule: Host(`cwa.${DOMAIN}`)
       traefik.http.routers.cwa-https.entrypoints: https
@@ -51,8 +59,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: 1m
-        max-file: 1
+        max-size: 10m
+        max-file: "3"
         tag: "{{.Name}}"
     volumes:
       - calibre-web-automated_config:/config
@@ -76,10 +84,10 @@ services:
     labels:
       # Boot order, see jbruns/home-ops ADR-0003 (0 edge, 1 dependencies, 2 Exposed Services, 3 sidecars)
       startup-order: "2"
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot-media
+      # Monitoring: Tier and Probes, see jbruns/home-ops GLOSSARY.md (Probe, Uptime)
+      tier: warning
+      probe.url: https://cwd.${DOMAIN}/api/health
+      probe.idp_url: https://cwd.${DOMAIN}/
 
       traefik.enable: true
       traefik.docker.network: proxy
@@ -97,14 +105,22 @@ services:
       traefik.http.routers.shelfmark-https.service: shelfmark
       traefik.http.routers.shelfmark-https.middlewares: shelfmark-chain
 
+      # Unauthenticated health path for the Probe; everything else stays behind Authentik
+      traefik.http.routers.shelfmark-health.rule: Host(`cwd.${DOMAIN}`) && Path(`/api/health`)
+      traefik.http.routers.shelfmark-health.entrypoints: https
+      traefik.http.routers.shelfmark-health.tls: true
+      traefik.http.routers.shelfmark-health.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.shelfmark-health.service: shelfmark
+      traefik.http.routers.shelfmark-health.middlewares: crowdsec-bouncer
+
       traefik.http.middlewares.shelfmark-chain.chain.middlewares: crowdsec-bouncer,authentik
 
       traefik.http.services.shelfmark.loadbalancer.server.port: 8084
     logging:
       driver: json-file
       options:
-        max-size: 1m
-        max-file: 1
+        max-size: 10m
+        max-file: "3"
         tag: "{{.Name}}"
     volumes:
       - cwa-downloader_config:/config
