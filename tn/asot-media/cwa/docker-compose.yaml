@@ -12,6 +12,8 @@ services:
       - PGID=${MEDIA_SHARED_GID}
       - TZ=${TZ}
     labels:
+      # Boot order, see jbruns/home-ops ADR-0003 (0 edge, 1 dependencies, 2 Exposed Services, 3 sidecars)
+      startup-order: "2"
       stack-back.volumes: true
       stack-back.volumes.include: "calibre-web-automated_config"
 
@@ -72,6 +74,8 @@ services:
       - TZ=${TZ}
       - AA_DONATOR_KEY=${AA_DONATOR_KEY}
     labels:
+      # Boot order, see jbruns/home-ops ADR-0003 (0 edge, 1 dependencies, 2 Exposed Services, 3 sidecars)
+      startup-order: "2"
       # logs collection
       logging: promtail
       logging_jobname: containerlogs
