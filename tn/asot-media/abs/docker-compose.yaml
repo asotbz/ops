@@ -21,10 +21,9 @@ services:
       stack-back.volumes: true
       stack-back.volumes.include: "audiobookshelf_config,audiobookshelf_metadata"
 
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot-media
+      # Monitoring: Tier and Probes, see jbruns/home-ops GLOSSARY.md (Probe, Uptime)
+      tier: warning
+      probe.url: https://abs.${DOMAIN}/healthcheck
 
       traefik.enable: true
       traefik.docker.network: proxy
@@ -46,8 +45,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: 1m
-        max-file: 1
+        max-size: 10m
+        max-file: "3"
         tag: "{{.Name}}"
     volumes:
       - ${ZFS_POOL_ROOT_HDD}/media/audiobooks:/audiobooks
@@ -78,10 +77,9 @@ services:
       stack-back.volumes: true
       stack-back.volumes.include: "audiobookrequest_config"
       
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot-media
+      # Monitoring: Tier and Probes, see jbruns/home-ops GLOSSARY.md (Probe, Uptime)
+      tier: warning
+      probe.url: https://abr.${DOMAIN}/api/health
 
       traefik.enable: true
       traefik.docker.network: proxy
@@ -103,8 +101,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: 1m
-        max-file: 1
+        max-size: 10m
+        max-file: "3"
         tag: "{{.Name}}"
     volumes:
       - audiobookrequest_config:/config
