@@ -277,3 +277,56 @@ groups:
     labels:
       severity: critical
 
+
+# Indexer health from nzbhydra2's stats API (xfer/nzbhydra2-exporter).
+- name: nzbhydra2
+  rules:
+  - alert: NzbhydraStatsDown
+    annotations:
+      summary: nzbhydra2 indexer stats are unavailable
+      description: "nzbhydra2-exporter cannot read nzbhydra2's stats API (or cannot be scraped) for 10 minutes."
+    expr: up{job="nzbhydra2"} == 0 or nzbhydra2_up == 0
+    for: 10m
+    labels:
+      severity: warning
+
+  # hydra gave up on the indexer (e.g. bad credentials) until it is re-enabled by hand.
+  - alert: NzbhydraIndexerDisabled
+    annotations:
+      summary: "nzbhydra2 disabled indexer {{ $labels.indexer }}"
+      description: "{{ $labels.indexer }} is disabled by nzbhydra2. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
+    expr: nzbhydra2_indexer_state{state="DISABLED_SYSTEM"} == 1
+    for: 5m
+    labels:
+      severity: warning
+
+  # Short backoffs after errors are routine; alert only when one lasts.
+  - alert: NzbhydraIndexerBackingOff
+    annotations:
+      summary: "nzbhydra2 indexer {{ $labels.indexer }} has been backing off for 30 minutes"
+      description: "{{ $labels.indexer }} is temporarily disabled after errors. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
+    expr: nzbhydra2_indexer_state{state="DISABLED_SYSTEM_TEMPORARY"} == 1
+    for: 30m
+    labels:
+      severity: warning
+
+  - alert: NzbhydraIndexerLimitNear
+    annotations:
+      summary: "{{ $labels.indexer }} has used {{ $value | humanizePercentage }} of its {{ $labels.limit }} limit"
+      description: "nzbhydra2 stops using {{ $labels.indexer }} when the daily {{ $labels.limit }} limit is reached."
+    expr: |
+      label_replace(nzbhydra2_indexer_api_hits / nzbhydra2_indexer_api_hit_limit, "limit", "API hit", "", "") > 0.9
+        or
+      label_replace(nzbhydra2_indexer_download_hits / nzbhydra2_indexer_download_hit_limit, "limit", "download", "", "") > 0.9
+    for: 15m
+    labels:
+      severity: warning
+
+  - alert: NzbhydraIndexerVipExpiring
+    annotations:
+      summary: "{{ $labels.indexer }} VIP expires in {{ $value | humanizeDuration }}"
+      description: "Renew the {{ $labels.indexer }} VIP membership."
+    expr: nzbhydra2_indexer_vip_expiry_timestamp_seconds - time() < 14 * 86400
+    for: 1h
+    labels:
+      severity: warning

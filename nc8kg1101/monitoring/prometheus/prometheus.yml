@@ -27,6 +27,15 @@ scrape_configs:
         labels:
           container: 'crowdsec'
           
+  # XFER STACK
+  - job_name: nzbhydra2
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    static_configs:
+      - targets: [ 'nzbhydra2-exporter:9811' ]
+        labels:
+          container: 'nzbhydra2-exporter'
+
   # core monitoring services. likely do not need to be modified.
   - job_name: prometheus
     static_configs:
