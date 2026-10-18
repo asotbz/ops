@@ -1,0 +1,67 @@
+services:
+  alertmanager:
+    image: prom/alertmanager:v0.34.0
+    container_name: alertmanager
+    user: ${MONITORING_UID}:${MONITORING_GID}
+    security_opt:
+      - no-new-privileges=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    # Receiver URLs arrive as env from .sops.env; Alertmanager reads them only from files.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        umask 077
+        printf '%s' "$$DISCORD_WEBHOOK_URL" > /run/alertmanager/discord_webhook
+        printf '%s' "$$WATCHDOG_URL" > /run/alertmanager/watchdog_url
+        unset DISCORD_WEBHOOK_URL WATCHDOG_URL
+        exec /bin/alertmanager \
+          --config.file=/etc/alertmanager/config.yml \
+          --storage.path=/alertmanager \
+          --log.level=warn
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - WATCHDOG_URL=${WATCHDOG_URL}
+    labels:
+      stack-back.volumes: true
+      stack-back.volumes.include: "alertmanager_data"
+
+      # logs collection
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: monitoring
+
+      # network policy
+      whalewall.enabled: true
+      # alertmanager: Discord and healthchecks.io over HTTPS; Prometheus and Loki connect in.
+      whalewall.rules: |
+        output:
+          # DNS
+          - proto: udp
+            dst_ports:
+              - 53
+          # HTTPS
+          - proto: tcp
+            dst_ports:
+              - 443
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+        max-file: 1
+        tag: "{{.Name}}"
+    tmpfs:
+      - /run/alertmanager
+    volumes:
+      - ./config.yml:/etc/alertmanager/config.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - backend
+
+volumes:
+  alertmanager_data:
