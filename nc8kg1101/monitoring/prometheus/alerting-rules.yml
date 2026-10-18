@@ -1,4 +1,11 @@
 groups:
+# Always firing; Alertmanager forwards it to a healthchecks.io heartbeat (dead man's switch).
+- name: meta
+  rules:
+  - alert: Watchdog
+    annotations:
+      summary: Alerting pipeline heartbeat
+    expr: vector(1)
 - name: node-exporter
   rules:
   - alert: NodeOutOfMemory
@@ -289,6 +296,7 @@ groups:
     for: 10m
     labels:
       severity: warning
+      tier: warning
 
   # hydra gave up on the indexer (e.g. bad credentials) until it is re-enabled by hand.
   - alert: NzbhydraIndexerDisabled
@@ -299,6 +307,7 @@ groups:
     for: 5m
     labels:
       severity: warning
+      tier: warning
 
   # Short backoffs after errors are routine; alert only when one lasts.
   - alert: NzbhydraIndexerBackingOff
@@ -309,6 +318,7 @@ groups:
     for: 30m
     labels:
       severity: warning
+      tier: warning
 
   - alert: NzbhydraIndexerLimitNear
     annotations:
@@ -321,6 +331,7 @@ groups:
     for: 15m
     labels:
       severity: warning
+      tier: warning
 
   - alert: NzbhydraIndexerVipExpiring
     annotations:
@@ -330,3 +341,4 @@ groups:
     for: 1h
     labels:
       severity: warning
+      tier: warning

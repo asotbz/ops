@@ -1,0 +1,41 @@
+# Alertmanager for nc8kg1101's own Prometheus and Loki ruler; independent of any other host.
+#   Watchdog           -> healthchecks.io heartbeat; silence means the alert pipeline is broken
+#   severity/tier info -> never notifies
+#   everything else    -> Discord (the channel nzbhydra2 notifies today)
+# The entrypoint writes the URLs from .sops.env into /run/alertmanager before starting.
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: discord
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  routes:
+    - matchers: [alertname="Watchdog"]
+      receiver: heartbeat
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 1m
+    - matchers: [severity="info"]
+      receiver: blackhole
+    - matchers: [tier="info"]
+      receiver: blackhole
+
+inhibit_rules:
+  - source_matchers: [alertname="NzbhydraStatsDown"]
+    target_matchers: [alertname=~"NzbhydraIndexer.+"]
+
+receivers:
+  - name: blackhole
+
+  - name: heartbeat
+    webhook_configs:
+      - url_file: /run/alertmanager/watchdog_url
+        send_resolved: false
+
+  - name: discord
+    discord_configs:
+      - webhook_url_file: /run/alertmanager/discord_webhook
+        send_resolved: true
