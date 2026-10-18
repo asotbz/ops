@@ -38,7 +38,7 @@ services:
       traefik.http.routers.cwa-opds.service: cwa
       traefik.http.routers.cwa-opds.middlewares: crowdsec-bouncer
 
-      # Unauthenticated health path for the Probe; everything else stays behind Authentik
+      # Unauthenticated health path for the Probe; everything else stays behind the IdP (forward auth from jbruns/home-ops edge)
       traefik.http.routers.cwa-health.rule: Host(`cwa.${DOMAIN}`) && Path(`/health`)
       traefik.http.routers.cwa-health.entrypoints: https
       traefik.http.routers.cwa-health.tls: true
@@ -55,7 +55,7 @@ services:
 
       traefik.http.services.cwa.loadbalancer.server.port: 8083
 
-      traefik.http.middlewares.cwa-chain.chain.middlewares: crowdsec-bouncer,authentik
+      traefik.http.middlewares.cwa-chain.chain.middlewares: crowdsec-bouncer,idp-forward-auth
     logging:
       driver: json-file
       options:
@@ -105,7 +105,7 @@ services:
       traefik.http.routers.shelfmark-https.service: shelfmark
       traefik.http.routers.shelfmark-https.middlewares: shelfmark-chain
 
-      # Unauthenticated health path for the Probe; everything else stays behind Authentik
+      # Unauthenticated health path for the Probe; everything else stays behind the IdP (forward auth from jbruns/home-ops edge)
       traefik.http.routers.shelfmark-health.rule: Host(`cwd.${DOMAIN}`) && Path(`/api/health`)
       traefik.http.routers.shelfmark-health.entrypoints: https
       traefik.http.routers.shelfmark-health.tls: true
@@ -113,7 +113,7 @@ services:
       traefik.http.routers.shelfmark-health.service: shelfmark
       traefik.http.routers.shelfmark-health.middlewares: crowdsec-bouncer
 
-      traefik.http.middlewares.shelfmark-chain.chain.middlewares: crowdsec-bouncer,authentik
+      traefik.http.middlewares.shelfmark-chain.chain.middlewares: crowdsec-bouncer,idp-forward-auth
 
       traefik.http.services.shelfmark.loadbalancer.server.port: 8084
     logging:
