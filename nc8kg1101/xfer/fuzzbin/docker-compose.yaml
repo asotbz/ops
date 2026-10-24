@@ -7,13 +7,10 @@ services:
     container_name: fuzzbin
     restart: unless-stopped
     labels:
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: warning
       stack-back.volumes: true
       stack-back.volumes.include: "fuzzbin_config"
-
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: xfer
 
     logging:
       driver: json-file

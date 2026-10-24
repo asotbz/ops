@@ -10,10 +10,6 @@ services:
     environment:
       - COMPOSE_UNPACKER_IMAGE=ghcr.io/jbruns/compose-unpacker:2.45.0-sops.1
     labels:
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: common
-
       # network policy
       whalewall.enabled: true
       whalewall.rules: |

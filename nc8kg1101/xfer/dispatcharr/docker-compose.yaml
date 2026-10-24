@@ -12,13 +12,10 @@ services:
       - CELERY_BROKER_URL=redis://localhost:6379/0
       # - DISPATCHARR_LOG_LEVEL=debug
     labels:
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: warning
       stack-back.volumes: true
       stack-back.volumes.include: "dispatcharr_data"
-      
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: xfer
 
       traefik.enable: true
 

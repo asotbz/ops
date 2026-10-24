@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  # Read-only Docker API (POST=0: GET only) for Prometheus docker_sd and container-health-exporter:
+  # GET under /containers and /networks.
+  docker-socket-proxy:
+    # https://github.com/Tecnativa/docker-socket-proxy
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: tecnativa/docker-socket-proxy:v0.5.0@sha256:1f5038b54f06c3e18422902cf00ba21803d1c97805aae032e5e6673d532d3459
+    container_name: docker-socket-proxy
+    deploy:
+      resources:
+        limits:
+          # New at the cutover; a small HAProxy
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    environment:
+      CONTAINERS: "1"
+      NETWORKS: "1"
+      VOLUMES: "0"
+      SYSTEM: "0"
+      EVENTS: "0"
+      POST: "0"
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "3"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Not published; only Prometheus on the Stack's default network reaches it.
+    networks:
+      - default

@@ -17,11 +17,8 @@ services:
       retries: 5
       timeout: 3s
     labels:
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot
-
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: critical
       # network policy
       whalewall.enabled: true
       whalewall.rules: |
@@ -59,11 +56,8 @@ services:
       # https://github.com/oliver006/redis_exporter?tab=readme-ov-file#command-line-flags
       - REDIS_ADDR=redis://redis:6379
     labels:
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot
-
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: info
       # network policy
       whalewall.enabled: true
       whalewall.rules: |

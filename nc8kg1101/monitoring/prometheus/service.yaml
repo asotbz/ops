@@ -1,0 +1,150 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  prometheus:
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
+    container_name: prometheus
+    # Root, as under Portainer, which wrote the existing TSDB as root into the image's nobody-owned
+    # /prometheus; DAC_OVERRIDE lets root keep writing there after cap_drop: [ALL]. Dropping both
+    # needs a one-off chown of monitoring_prometheus_data to MONITORING_UID.
+    user: "0:0"
+    cap_add: [DAC_OVERRIDE]
+    deploy:
+      resources:
+        limits:
+          # 732M working set at cutover, before the longer retention below
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null --header \"Authorization: Basic $$(printf prometheus:%s \"$$(cat /run/secrets/prometheus_password)\" | base64)\" http://127.0.0.1:9090/-/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.config.file=/etc/prometheus/web.yml'
+      - '--log.level=error'
+      - '--storage.tsdb.path=/prometheus'
+      # 400d so daily Availability (recording-rules.yml) covers a year. The size cap removes the
+      # oldest blocks first if growth outpaces that.
+      - '--storage.tsdb.retention.time=400d'
+      - '--storage.tsdb.retention.size=30GB'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.external-url=https://prometheus.${DOMAIN}'
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "1"
+
+      stack-back.volumes: true
+      stack-back.volumes.include: "prometheus_data"
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.prometheus-http.rule: Host(`prometheus.${DOMAIN}`)
+      traefik.http.routers.prometheus-http.entrypoints: http
+      traefik.http.routers.prometheus-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.prometheus-https.rule: Host(`prometheus.${DOMAIN}`)
+      traefik.http.routers.prometheus-https.entrypoints: https
+      traefik.http.routers.prometheus-https.tls: true
+      traefik.http.routers.prometheus-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.prometheus-https.service: prometheus
+      traefik.http.routers.prometheus-https.middlewares: crowdsec-bouncer
+
+      # Probe (GLOSSARY.md): the public path a user takes; see prometheus.yml
+      probe.url: https://prometheus.${DOMAIN}/-/healthy
+      probe.module: http_auth
+
+      traefik.http.services.prometheus.loadbalancer.server.port: 9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - type: bind
+        source: ./web.sops.yml
+        target: /etc/prometheus/web.yml
+        read_only: true
+        # Stored encrypted in repo
+        x-sops: true
+      - ./recording-rules.yml:/etc/prometheus/recording-rules.yml:ro
+      - ./alerting-rules.yml:/etc/prometheus/alerting-rules.yml:ro
+
+      - prometheus_data:/prometheus
+      # file_sd written by dependencies-render
+      - dependencies_sd:/etc/prometheus/sd:ro
+    secrets:
+      - prometheus_password
+    networks:
+      - default
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+      # Scrapes the exporters of other Stacks (ADR 0002)
+      - metrics
+
+  dependencies-render:
+    # Renders the placeholders in dependencies.yml into the file Prometheus reads as file_sd, which it
+    # reloads on change. Not a Compose config: Compose does not recreate a container when only a
+    # config's content changes. This container is recreated when the template (a bind mount) or a
+    # value (its environment) changes. The volume is mounted at /tmp so it starts out writable.
+    # hops runs this image (python3, digest-pinned) for logs --loki and volume move.
+    # https://hub.docker.com/_/python
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: python:3.14.8-alpine3.24@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72
+    container_name: dependencies-render
+    deploy:
+      resources:
+        limits:
+          # 12M working set where it already runs
+          memory: 64M
+    init: true
+    user: ${MONITORING_UID}:${MONITORING_GID}
+    read_only: true
+    network_mode: none
+    healthcheck:
+      test: ["CMD", "test", "-s", "/tmp/dependencies.yml"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
+    command:
+      - python3
+      - -c
+      - |
+        import os, signal, string
+        out = string.Template(open("/etc/dependencies.yml").read()).substitute(os.environ)
+        with open("/tmp/.dependencies.yml", "w") as f:
+            f.write(out)
+        os.chmod("/tmp/.dependencies.yml", 0o600)
+        os.replace("/tmp/.dependencies.yml", "/tmp/dependencies.yml")
+        print("rendered dependencies.yml", flush=True)
+        signal.pause()
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "1"
+    volumes:
+      - ./dependencies.yml:/etc/dependencies.yml:ro
+      - dependencies_sd:/tmp
+
+volumes:
+  dependencies_sd:
+    name: monitoring_dependencies_sd
+    labels:
+      homeops.regenerable: "dependencies-render rewrites it from dependencies.yml at each start"
+  # Created by the legacy monitoring group under the same name, kept at the cutover (asotbz/ops#302).
+  prometheus_data:
+    name: monitoring_prometheus_data
+    external: true
+
+# Stored encrypted in repo as <name>.sops.txt
+secrets:
+  prometheus_password:
+    file: ./prometheus_password.sops.txt

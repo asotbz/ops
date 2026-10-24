@@ -1,0 +1,28 @@
+# MONITORING STACK (deployed by doco-cd)
+# nc8kg1101's own telemetry (ADR 0011): Prometheus and Alertmanager, Loki fed by Alloy, the exporters,
+# and blackbox-exporter for Probes. Every Service extends the Baseline (../_baseline.yaml).
+## With thanks to https://github.com/ruanbekker/docker-monitoring-stack-gpnc
+
+# Internal traffic between monitoring Services stays on the Stack's default network,
+# monitoring_default; hops reaches Loki there (loki:3100).
+networks:
+  # Prometheus and the exporters of other Stacks; owned here (ADR 0002). The bootstrap wizard
+  # created it with this Stack's Compose labels, so this Stack adopts it as it is.
+  metrics:
+    name: metrics
+    driver: bridge
+  # Traefik and the Exposed Services it routes to; owned by the edge Stack.
+  proxy:
+    name: proxy
+    external: true
+
+include:
+  - ./alertmanager/service.yaml
+  - ./alloy/service.yaml
+  - ./blackbox-exporter/service.yaml
+  - ./cadvisor/service.yaml
+  - ./container-health-exporter/service.yaml
+  - ./docker-socket-proxy/service.yaml
+  - ./loki/service.yaml
+  - ./node-exporter/service.yaml
+  - ./prometheus/service.yaml
