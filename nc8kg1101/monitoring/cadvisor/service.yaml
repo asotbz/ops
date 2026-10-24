@@ -1,35 +1,37 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 services:
   cadvisor:
     # https://github.com/google/cadvisor
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
     image: ghcr.io/google/cadvisor:v0.60.6@sha256:b8e7d1093144fd088f425ff003d75a4aa405de075db78dae3bc563730b1bd07a
     container_name: cadvisor
-    restart: unless-stopped
+    # Root, but must read other users' overlay2 dirs to count container disk usage and inodes.
+    cap_add: [DAC_READ_SEARCH]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    deploy:
+      resources:
+        limits:
+          # 247M working set at cutover
+          memory: 768M
     command:
       # https://github.com/google/cadvisor/blob/master/docs/running.md#with-docker
       # https://github.com/google/cadvisor/issues/3139
-      - --enable_metrics=cpu,cpuLoad,disk,diskIO,memory,network
+      - --enable_metrics=cpu,cpuLoad,disk,diskIO,memory,network,oom_event
       # https://github.com/google/cadvisor/issues/2523
       - --docker_only=true
       - --housekeeping_interval=10s
     labels:
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: monitoring
-
-      # network policy
-      whalewall.enabled: true
-      whalewall.rules: |
-        output:
-          # metrics scrape
-          - network: common_backend
-            container: prometheus
-    logging:
-      driver: json-file
-      options:
-        max-size: 1m
-        max-file: 1
-        tag: "{{.Name}}"
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "3"
     volumes:
       # Adjusted to enable specific metrics above
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -45,4 +47,4 @@ services:
       - ${DOCKER_DATA_ROOT}/overlay2:/rootfs/${DOCKER_DATA_ROOT}/overlay2:ro
       - ${DOCKER_DATA_ROOT}/image:/rootfs/${DOCKER_DATA_ROOT}/image:ro
     networks:
-      - backend
+      - default

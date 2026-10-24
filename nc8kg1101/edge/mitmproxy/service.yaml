@@ -41,10 +41,6 @@ services:
       startup-order: "0"
       stack-back.volumes: true
       stack-back.volumes.include: "mitmproxy_data"
-      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: edge
 
       traefik.enable: true
 
@@ -61,8 +57,9 @@ services:
       traefik.http.routers.mitmproxy-https.service: mitmproxy
       traefik.http.routers.mitmproxy-https.middlewares: crowdsec-bouncer
 
-      # Probe (GLOSSARY.md): the public path a user takes. Unused until monitoring is cut over.
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
       probe.url: https://mmp.${DOMAIN}/
+      probe.module: http_403
 
       traefik.http.services.mitmproxy.loadbalancer.server.port: 8081
     volumes:
@@ -108,10 +105,6 @@ services:
       # Alert Tier (GLOSSARY.md): critical | warning | info
       tier: critical
       startup-order: "0"
-      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: edge
 
       traefik.enable: true
 
@@ -128,8 +121,9 @@ services:
       traefik.http.routers.openresty-https.service: openresty
       traefik.http.routers.openresty-https.middlewares: crowdsec-bouncer
 
-      # Probe (GLOSSARY.md): the public path a user takes. Unused until monitoring is cut over.
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
       probe.url: https://orx.${DOMAIN}/
+      probe.module: http_403
 
       traefik.http.services.openresty.loadbalancer.server.port: 8080
     volumes:

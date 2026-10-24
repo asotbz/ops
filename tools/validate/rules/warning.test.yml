@@ -1,0 +1,384 @@
+rule_files:
+  - /etc/prometheus/recording-rules.yml
+  - /etc/prometheus/alerting-rules.yml
+evaluation_interval: 1m
+# Alerts read recording rules from other groups; evaluate those first so timings are deterministic.
+group_eval_order: [prometheus_node_exporter_rules, traefik_services, availability]
+tests:
+  - name: Watchdog is continuously firing
+    promql_expr_test:
+      - expr: sum by (alertname, tier, stack) (ALERTS{alertname="Watchdog",alertstate="firing"})
+        eval_time: 0m
+        exp_samples:
+          - labels: '{alertname="Watchdog",tier="heartbeat",stack="monitoring"}'
+            value: 1
+
+  - name: InternetDown requires every Internet Probe to fail
+    interval: 1m
+    input_series:
+      - series: probe_success{job="internet",instance="one"}
+        values: 1+0x2 0+0x2 1+0x3
+      - series: probe_success{job="internet",instance="two"}
+        values: 0+0x9
+    promql_expr_test:
+      - expr: &internet sum by (alertname, tier, stack) (ALERTS{alertname="InternetDown",alertstate="firing"})
+        eval_time: 4m
+        exp_samples: []
+      - expr: *internet
+        eval_time: 5m
+        exp_samples:
+          - labels: '{alertname="InternetDown",tier="warning",stack="monitoring"}'
+            value: 1
+      - expr: *internet
+        eval_time: 6m
+        exp_samples: []
+
+  - name: Missing Probe alerts wait ten minutes and recover when discovery returns
+    interval: 1m
+    input_series:
+      - series: probe_success{job="probe"}
+        values: _x11 1+0x3
+    promql_expr_test:
+      - expr: &probes sum by (alertname, tier, stack) (ALERTS{alertname="ProbesMissing",alertstate="firing"})
+        eval_time: 9m
+        exp_samples: []
+      - expr: *probes
+        eval_time: 10m
+        exp_samples:
+          - labels: '{alertname="ProbesMissing",tier="warning",stack="monitoring"}'
+            value: 1
+      - expr: *probes
+        eval_time: 11m
+        exp_samples: []
+
+  - name: Http5xxRatio evaluates its recording rules and routes even Critical errors to the Digest
+    interval: 1m
+    input_series:
+      - series: traefik_service_requests_total{service="outline@docker",code="200"}
+        values: 0+9x40
+      - series: traefik_service_requests_total{service="outline@docker",code="503"}
+        values: 0+1x30 30+0x10
+      - series: container_last_seen{name="outline",container_label_com_docker_compose_project="asot",container_label_tier="critical"}
+        values: 0+60x41
+      - series: traefik_service_requests_total{service="orphan@file",code="200"}
+        values: 0+9x40
+      - series: traefik_service_requests_total{service="orphan@file",code="503"}
+        values: 0+1x30 30+0x10
+      - series: traefik_service_requests_total{service="ignored@docker",code="501"}
+        values: 0+100x41
+      - series: traefik_service_requests_total{service="tiny@docker",code="503"}
+        values: 0 1+0x40
+    promql_expr_test:
+      - expr: &http sum by (alertname, tier, stack, container) (ALERTS{alertname="Http5xxRatio",alertstate="firing"})
+        eval_time: 15m
+        exp_samples: []
+      - expr: *http
+        eval_time: 16m
+        exp_samples:
+          - labels: '{alertname="Http5xxRatio",tier="warning",stack="asot",container="outline"}'
+            value: 1
+          - labels: '{alertname="Http5xxRatio",tier="warning",stack="edge",container="orphan"}'
+            value: 1
+      - expr: *http
+        eval_time: 40m
+        exp_samples: []
+
+  - name: Container diagnostics retain the labels used by inhibition and wait their for durations
+    interval: 1m
+    input_series:
+      - series: container_leftover_name{container="temporary_web",stack="app",service="web"}
+        values: 1+0x10 0+0x7
+      - series: container_health_up{stack="monitoring"}
+        values: 0+0x5 1+0x12
+      - series: container_memory_working_set_bytes{name="web",container_label_com_docker_compose_project="app",container_label_tier="critical"}
+        values: 91+0x15 90+0x2
+      - series: container_spec_memory_limit_bytes{name="web",container_label_com_docker_compose_project="app",container_label_tier="critical"}
+        values: 100+0x18
+      - series: container_memory_working_set_bytes{name="unlimited",container_label_com_docker_compose_project="app",container_label_tier="warning"}
+        values: 100+0x18
+      - series: container_spec_memory_limit_bytes{name="unlimited",container_label_com_docker_compose_project="app",container_label_tier="warning"}
+        values: 0+0x18
+      - series: container_memory_working_set_bytes{name="doco-cd-doco-cd-6-self-applier-1792000000",container_label_tier="warning"}
+        values: 95+0x18
+      - series: container_spec_memory_limit_bytes{name="doco-cd-doco-cd-6-self-applier-1792000000",container_label_tier="warning"}
+        values: 100+0x18
+    promql_expr_test:
+      - expr: &leftover sum by (alertname, tier, stack, container) (ALERTS{alertname="ContainerLeftoverName",alertstate="firing"})
+        eval_time: 9m
+        exp_samples: []
+      - expr: *leftover
+        eval_time: 10m
+        exp_samples:
+          - labels: '{alertname="ContainerLeftoverName",tier="warning",stack="app",container="temporary_web"}'
+            value: 1
+      - expr: *leftover
+        eval_time: 11m
+        exp_samples: []
+      - expr: &blind sum by (alertname, tier, stack, name) (ALERTS{alertname="ContainerHealthExporterBlind",alertstate="firing"})
+        eval_time: 4m
+        exp_samples: []
+      - expr: *blind
+        eval_time: 5m
+        exp_samples:
+          - labels: '{alertname="ContainerHealthExporterBlind",tier="warning",stack="monitoring",name="docker-socket-proxy"}'
+            value: 1
+      - expr: *blind
+        eval_time: 6m
+        exp_samples: []
+      - expr: &memory sum by (alertname, tier, stack) (ALERTS{alertname="ContainerMemoryNearLimit",alertstate="firing"})
+        eval_time: 14m
+        exp_samples: []
+      - expr: *memory
+        eval_time: 15m
+        exp_samples:
+          - labels: '{alertname="ContainerMemoryNearLimit",tier="warning",stack="app"}'
+            value: 1
+      - expr: *memory
+        eval_time: 16m
+        exp_samples: []
+
+  # Without homeops_container_declared (node-exporter's textfile), ContainerDown cannot fire.
+  - name: DeclaredContainersMissing reports a missing declared-containers textfile
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="app",service="web",name="web",tier="warning"}
+        values: 1x2 stale
+    promql_expr_test:
+      - expr: &declared sum by (alertname, tier, stack) (ALERTS{alertname="DeclaredContainersMissing",alertstate="firing"})
+        eval_time: 12m
+        exp_samples: []
+      - expr: *declared
+        eval_time: 13m
+        exp_samples:
+          - labels: '{alertname="DeclaredContainersMissing",tier="warning",stack="monitoring"}'
+            value: 1
+
+  - name: Host warnings check strict thresholds and sustained clock failure
+    interval: 1m
+    input_series:
+      - series: node_memory_MemAvailable_bytes{job="node-exporter"}
+        values: 4+0x5 5+0x6
+      - series: node_memory_MemTotal_bytes{job="node-exporter"}
+        values: 100+0x12
+      - series: node_nf_conntrack_entries{job="node-exporter"}
+        values: 76+0x5 75+0x6
+      - series: node_nf_conntrack_entries_limit{job="node-exporter"}
+        values: 100+0x12
+      - series: node_timex_sync_status{job="node-exporter"}
+        values: 0+0x12
+      - series: node_timex_maxerror_seconds{job="node-exporter"}
+        values: 16+0x10 15+0x2
+    promql_expr_test:
+      - expr: &hostmem sum by (alertname, tier, stack) (ALERTS{alertname="HostOutOfMemory",alertstate="firing"})
+        eval_time: 4m
+        exp_samples: []
+      - expr: *hostmem
+        eval_time: 5m
+        exp_samples:
+          - labels: '{alertname="HostOutOfMemory",tier="warning",stack="host"}'
+            value: 1
+      - expr: *hostmem
+        eval_time: 6m
+        exp_samples: []
+      - expr: &conntrack sum by (alertname, tier, stack) (ALERTS{alertname="HostConntrackNearLimit",alertstate="firing"})
+        eval_time: 4m
+        exp_samples: []
+      - expr: *conntrack
+        eval_time: 5m
+        exp_samples:
+          - labels: '{alertname="HostConntrackNearLimit",tier="warning",stack="host"}'
+            value: 1
+      - expr: *conntrack
+        eval_time: 6m
+        exp_samples: []
+      - expr: &clock sum by (alertname, tier, stack) (ALERTS{alertname="HostClockNotSynchronising",alertstate="firing"})
+        eval_time: 9m
+        exp_samples: []
+      - expr: *clock
+        eval_time: 10m
+        exp_samples:
+          - labels: '{alertname="HostClockNotSynchronising",tier="warning",stack="host"}'
+            value: 1
+      - expr: *clock
+        eval_time: 11m
+        exp_samples: []
+
+  - name: Deploy counters need repeated failures and recover when failures leave the window
+    interval: 1m
+    input_series:
+      - series: doco_cd_deployment_errors_total{deployment="edge"}
+        values: 0 1 2+0x18
+      # No deployment label: no Stack to report.
+      - series: doco_cd_deployment_errors_total{context="default"}
+        values: 0 1 2+0x18
+    promql_expr_test:
+      - expr: &deploy sum by (alertname, tier, stack) (ALERTS{alertname="DeployFailing",alertstate="firing"})
+        eval_time: 1m
+        exp_samples: []
+      - expr: *deploy
+        eval_time: 2m
+        exp_samples:
+          - labels: '{alertname="DeployFailing",tier="warning",stack="edge"}'
+            value: 1
+      - expr: *deploy
+        eval_time: 12m
+        exp_samples: []
+
+  # A failing health check at the container's own Tier; Services without one, and Info, never.
+  - name: ContainerUnhealthy waits five minutes at the container's Tier and skips Info and unlabelled containers
+    interval: 1m
+    input_series:
+      - series: container_healthy{job="container-health",container="postgresql",stack="asot",tier="critical"}
+        values: 1 0x6 1x3
+      - series: container_healthy{job="container-health",container="redis-exporter",stack="asot",tier="info"}
+        values: 0x10
+      - series: container_healthy{job="container-health",container="adhoc",stack="",tier="warning"}
+        values: 0x10
+    promql_expr_test:
+      - expr: &unhealthy sum by (alertname, tier, stack, name) (ALERTS{alertname="ContainerUnhealthy",alertstate="firing"})
+        eval_time: 5m
+        exp_samples: []
+      - expr: *unhealthy
+        eval_time: 6m
+        exp_samples:
+          - labels: '{alertname="ContainerUnhealthy",tier="critical",stack="asot",name="postgresql"}'
+            value: 1
+      - expr: *unhealthy
+        eval_time: 8m
+        exp_samples: []
+
+  - name: HostFilesystemAlmostFull needs under 10% free on a writable XFS filesystem for 30 minutes
+    interval: 1m
+    input_series:
+      - series: node_filesystem_avail_bytes{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 9x35 11x3
+      - series: node_filesystem_size_bytes{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 100x38
+      - series: node_filesystem_readonly{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 0x38
+      - series: node_filesystem_avail_bytes{job="node-exporter",mountpoint="/boot/efi",fstype="vfat"}
+        values: 1x38
+      - series: node_filesystem_size_bytes{job="node-exporter",mountpoint="/boot/efi",fstype="vfat"}
+        values: 100x38
+      - series: node_filesystem_readonly{job="node-exporter",mountpoint="/boot/efi",fstype="vfat"}
+        values: 0x38
+    promql_expr_test:
+      - expr: &almostfull sum by (alertname, tier, stack, mountpoint) (ALERTS{alertname="HostFilesystemAlmostFull",alertstate="firing"})
+        eval_time: 29m
+        exp_samples: []
+      - expr: *almostfull
+        eval_time: 30m
+        exp_samples:
+          - labels: '{alertname="HostFilesystemAlmostFull",tier="warning",stack="host",mountpoint="/"}'
+            value: 1
+      - expr: *almostfull
+        eval_time: 37m
+        exp_samples: []
+
+  - name: NzbhydraStatsDown fires on a failed scrape or a failed stats read and waits ten minutes
+    interval: 1m
+    input_series:
+      - series: up{job="nzbhydra2",stack="xfer",tier="warning"}
+        values: 1x12 0x12
+      - series: nzbhydra2_up{job="nzbhydra2",stack="xfer",tier="warning"}
+        values: 0x11 1
+    promql_expr_test:
+      - expr: &hydra sum by (alertname, tier, stack) (ALERTS{alertname="NzbhydraStatsDown",alertstate="firing"})
+        eval_time: 9m
+        exp_samples: []
+      - expr: *hydra
+        eval_time: 10m
+        exp_samples:
+          - labels: '{alertname="NzbhydraStatsDown",tier="warning",stack="xfer"}'
+            value: 1
+      - expr: *hydra
+        eval_time: 12m
+        exp_samples: []
+      # A failed scrape alone, after the stats recovered.
+      - expr: *hydra
+        eval_time: 24m
+        exp_samples:
+          - labels: '{alertname="NzbhydraStatsDown",tier="warning",stack="xfer"}'
+            value: 1
+
+  - name: nzbhydra2 indexer alerts wait their for durations and name the indexer
+    interval: 1m
+    input_series:
+      - series: nzbhydra2_indexer_state{job="nzbhydra2",indexer="alpha",state="DISABLED_SYSTEM"}
+        values: 1x6 0x2
+      - series: nzbhydra2_indexer_state{job="nzbhydra2",indexer="beta",state="DISABLED_SYSTEM_TEMPORARY"}
+        values: 1x31 0x2
+      - series: nzbhydra2_indexer_last_error_info{job="nzbhydra2",indexer="alpha",error="Bad API key"}
+        values: 1x40
+      - series: nzbhydra2_indexer_api_hits{job="nzbhydra2",indexer="gamma"}
+        values: 95x16 50x2
+      - series: nzbhydra2_indexer_api_hit_limit{job="nzbhydra2",indexer="gamma"}
+        values: 100x18
+      - series: nzbhydra2_indexer_download_hits{job="nzbhydra2",indexer="gamma"}
+        values: 10x18
+      - series: nzbhydra2_indexer_download_hit_limit{job="nzbhydra2",indexer="gamma"}
+        values: 100x18
+      # VIP expiry 10 days after t=0, so under 14 days throughout.
+      - series: nzbhydra2_indexer_vip_expiry_timestamp_seconds{job="nzbhydra2",indexer="delta"}
+        values: 864000x61 99999999x2
+    promql_expr_test:
+      - expr: &disabled sum by (alertname, tier, stack, indexer) (ALERTS{alertname="NzbhydraIndexerDisabled",alertstate="firing"})
+        eval_time: 4m
+        exp_samples: []
+      - expr: *disabled
+        eval_time: 5m
+        exp_samples:
+          - labels: '{alertname="NzbhydraIndexerDisabled",tier="warning",stack="xfer",indexer="alpha"}'
+            value: 1
+      - expr: *disabled
+        eval_time: 8m
+        exp_samples: []
+      - expr: &backoff sum by (alertname, tier, stack, indexer) (ALERTS{alertname="NzbhydraIndexerBackingOff",alertstate="firing"})
+        eval_time: 29m
+        exp_samples: []
+      - expr: *backoff
+        eval_time: 30m
+        exp_samples:
+          - labels: '{alertname="NzbhydraIndexerBackingOff",tier="warning",stack="xfer",indexer="beta"}'
+            value: 1
+      - expr: *backoff
+        eval_time: 33m
+        exp_samples: []
+      - expr: &limit sum by (alertname, tier, stack, indexer, limit) (ALERTS{alertname="NzbhydraIndexerLimitNear",alertstate="firing"})
+        eval_time: 14m
+        exp_samples: []
+      - expr: *limit
+        eval_time: 15m
+        exp_samples:
+          - labels: '{alertname="NzbhydraIndexerLimitNear",tier="warning",stack="xfer",indexer="gamma",limit="API hit"}'
+            value: 1
+      - expr: *limit
+        eval_time: 17m
+        exp_samples: []
+      - expr: &vip sum by (alertname, tier, stack, indexer) (ALERTS{alertname="NzbhydraIndexerVipExpiring",alertstate="firing"})
+        eval_time: 59m
+        exp_samples: []
+      - expr: *vip
+        eval_time: 60m
+        exp_samples:
+          - labels: '{alertname="NzbhydraIndexerVipExpiring",tier="warning",stack="xfer",indexer="delta"}'
+            value: 1
+      - expr: *vip
+        eval_time: 62m
+        exp_samples: []
+
+  - name: NzbhydraIndexerDisabled quotes the indexer's last error
+    interval: 1m
+    input_series:
+      - series: nzbhydra2_indexer_state{job="nzbhydra2",indexer="alpha",state="DISABLED_SYSTEM"}
+        values: 1x6
+      - series: nzbhydra2_indexer_last_error_info{job="nzbhydra2",indexer="alpha",error="Bad API key"}
+        values: 1x6
+    alert_rule_test:
+      - alertname: NzbhydraIndexerDisabled
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {tier: warning, stack: xfer, job: nzbhydra2, indexer: alpha, state: DISABLED_SYSTEM}
+            exp_annotations:
+              summary: nzbhydra2 disabled indexer alpha
+              description: "alpha is disabled by nzbhydra2. Last error: Bad API key"

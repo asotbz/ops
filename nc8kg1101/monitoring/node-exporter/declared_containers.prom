@@ -5,6 +5,16 @@ homeops_container_declared{stack="edge",service="mitmproxy",name="mitmproxy",tie
 homeops_container_declared{stack="edge",service="nginx",name="nginx",tier="critical"} 1
 homeops_container_declared{stack="edge",service="openresty",name="openresty",tier="critical"} 1
 homeops_container_declared{stack="edge",service="traefik",name="traefik",tier="critical"} 1
+homeops_container_declared{stack="monitoring",service="alertmanager",name="alertmanager",tier="critical"} 1
+homeops_container_declared{stack="monitoring",service="alloy",name="alloy",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="blackbox-exporter",name="blackbox-exporter",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="cadvisor",name="cadvisor",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="container-health-exporter",name="container-health-exporter",tier="info"} 1
+homeops_container_declared{stack="monitoring",service="dependencies-render",name="dependencies-render",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="docker-socket-proxy",name="docker-socket-proxy",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="loki",name="loki",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="node-exporter",name="node-exporter",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="prometheus",name="prometheus",tier="critical"} 1
 homeops_container_declared{stack="ops",service="apprise",name="apprise",tier="warning"} 1
 homeops_container_declared{stack="ops",service="doco-cd",name="doco-cd",tier="critical"} 1
 homeops_container_declared{stack="ops",service="stack-back",name="stack-back",tier="critical"} 1

@@ -10,7 +10,12 @@
 #   alertmanager, loki, alloy, grafana, ...), add its --path in the same PR. Names:
 #   https://github.com/jbruns/homelab-components/blob/validate-v1.1.0/repo-tools/validate/README.md#inputs
 --legacy-stack common
---legacy-stack monitoring
 --legacy-stack asot
 --legacy-stack xfer
 --path traefik=nc8kg1101/edge/traefik/service.yaml
+--path prometheus=nc8kg1101/monitoring/prometheus
+--path rule-tests=tools/validate/rules
+--path alertmanager=nc8kg1101/monitoring/alertmanager
+--path loki=nc8kg1101/monitoring/loki
+--path alloy=nc8kg1101/monitoring/alloy
+--path blackbox=nc8kg1101/monitoring/blackbox-exporter/blackbox.yml

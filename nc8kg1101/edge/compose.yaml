@@ -21,8 +21,7 @@ networks:
   forward-proxy:
     name: forward-proxy
     driver: bridge
-  # Prometheus and what it scrapes; owned by the monitoring Stack (ADR 0002). Created by the
-  # bootstrap wizard until monitoring moves to a compose.yaml Stack.
+  # Prometheus and what it scrapes; owned by the monitoring Stack (ADR 0002).
   metrics:
     name: metrics
     external: true

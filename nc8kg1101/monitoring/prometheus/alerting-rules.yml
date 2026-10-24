@@ -1,326 +1,334 @@
+# Alert rules. Every alert carries `tier` (critical | warning | info) and `stack`;
+# Alertmanager routes on `tier` (see alertmanager/config.yml and GLOSSARY.md).
 groups:
-# Always firing; Alertmanager forwards it to a healthchecks.io heartbeat (dead man's switch).
-- name: meta
-  rules:
-  - alert: Watchdog
-    annotations:
-      summary: Alerting pipeline heartbeat
-    expr: vector(1)
-- name: node-exporter
-  rules:
-  - alert: NodeOutOfMemory
-    annotations:
-      summary: Node out of memory (instance {{ $labels.instance }})
-      description: "Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-    labels:
-      severity: warning
-    expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}
-    for: 2m
+  - name: meta
+    rules:
+      # Heartbeat: always firing. healthchecks.io raises the alarm when it stops arriving.
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          tier: heartbeat
+          stack: monitoring
+        annotations:
+          summary: Alerting pipeline heartbeat
 
-  - alert: NodeMemoryUnderMemoryPressure
-    annotations:
-      summary: Node memory under memory pressure (instance {{ $labels.instance }})
-      description: "The node is under heavy memory pressure. High rate of major page faults\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-    labels:
-      severity: warning
-    expr: (rate(node_vmstat_pgmajfault[1m]) > 1000) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}
-    for: 2m
+  - name: targets
+    rules:
+      # `tier` and `stack` come from the scrape target's labels (prometheus.yml).
+      # For Probe jobs `up` only says blackbox-exporter answered; its own job covers that.
+      - alert: TargetDown
+        expr: up{job!~"probe|internet|dependency"} == 0
+        for: 5m
+        annotations:
+          summary: "{{ $labels.job }} scrape target is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} ({{ $labels.job }}) for 5 minutes."
 
-  - alert: NodeFilesystemSpaceFillingUp
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available space left and is filling up."
-      summary: "Filesystem is predicted to run out of space within the next 24 hours."
-    expr: |
-      (
-        node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 40
-      and
-        predict_linear(node_filesystem_avail_bytes{job="node-exporter",fstype!=""}[6h], 24*60*60) < 0
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: warning
-  - alert: NodeFilesystemSpaceFillingUp
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available space left and is filling up fast."
-      summary: "Filesystem is predicted to run out of space within the next 4 hours."
-    expr: |
-      (
-        node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 20
-      and
-        predict_linear(node_filesystem_avail_bytes{job="node-exporter",fstype!=""}[6h], 4*60*60) < 0
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: critical
-  - alert: NodeFilesystemAlmostOutOfSpace
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available space left."
-      summary: "Filesystem has less than 5% space left."
-    expr: |
-      (
-        node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 5
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: warning
-  - alert: NodeFilesystemAlmostOutOfSpace
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available space left."
-      summary: "Filesystem has less than 3% space left."
-    expr: |
-      (
-        node_filesystem_avail_bytes{job="node-exporter",fstype!=""} / node_filesystem_size_bytes{job="node-exporter",fstype!=""} * 100 < 3
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: critical
-  - alert: NodeFilesystemFilesFillingUp
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available inodes left and is filling up."
-      summary: "Filesystem is predicted to run out of inodes within the next 24 hours."
-    expr: |
-      (
-        node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 40
-      and
-        predict_linear(node_filesystem_files_free{job="node-exporter",fstype!=""}[6h], 24*60*60) < 0
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: warning
-  - alert: NodeFilesystemFilesFillingUp
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available inodes left and is filling up fast."
-      summary: "Filesystem is predicted to run out of inodes within the next 4 hours."
-    expr: |
-      (
-        node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 20
-      and
-        predict_linear(node_filesystem_files_free{job="node-exporter",fstype!=""}[6h], 4*60*60) < 0
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: critical
-  - alert: NodeFilesystemAlmostOutOfFiles
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available inodes left."
-      summary: "Filesystem has less than 5% inodes left."
-    expr: |
-      (
-        node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 5
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: warning
-  - alert: NodeFilesystemAlmostOutOfFiles
-    annotations:
-      description: "Filesystem on {{ $labels.device }} at {{ $labels.instance }} has only {{ printf \"%.2f\" $value }}% available inodes left."
-      summary: "Filesystem has less than 3% inodes left."
-    expr: |
-      (
-        node_filesystem_files_free{job="node-exporter",fstype!=""} / node_filesystem_files{job="node-exporter",fstype!=""} * 100 < 3
-      and
-        node_filesystem_readonly{job="node-exporter",fstype!=""} == 0
-      )
-    for: 1h
-    labels:
-      severity: critical
-  - alert: NodeNetworkReceiveErrs
-    annotations:
-      description: "{{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf \"%.0f\" $value }} receive errors in the last two minutes."
-      summary: "Network interface is reporting many receive errors."
-    expr: |
-      rate(node_network_receive_errs_total[2m]) / rate(node_network_receive_packets_total[2m]) > 0.01
-    for: 1h
-    labels:
-      severity: warning
-  - alert: NodeNetworkTransmitErrs
-    annotations:
-      description: "{{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf \"%.0f\" $value }} transmit errors in the last two minutes."
-      summary: "Network interface is reporting many transmit errors."
-    expr: |
-      rate(node_network_transmit_errs_total[2m]) / rate(node_network_transmit_packets_total[2m]) > 0.01
-    for: 1h
-    labels:
-      severity: warning
-  - alert: "NodeHighNumberConntrackEntriesUsed"
-    annotations:
-      description: "{{ $value | humanizePercentage }} of conntrack entries are used."
-      summary: "Number of conntrack are getting close to the limit."
-    expr: |
-      (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) > 0.75
-    labels:
-      severity: warning
-  - alert: NodeTextFileCollectorScrapeError
-    annotations:
-      description: "Node Exporter text file collector failed to scrape."
-      summary: "Node Exporter text file collector failed to scrape."
-    expr: |
-      node_textfile_scrape_error{job="node-exporter"} == 1
-    labels:
-      severity: warning
-  - alert: NodeClockSkewDetected
-    annotations:
-      description: "Clock on {{ $labels.instance }} is out of sync by more than 300s. Ensure NTP is configured correctly on this host."
-      summary: "Clock skew detected."
-    expr: |
-      (
-        node_timex_offset_seconds > 0.05
-      and
-        deriv(node_timex_offset_seconds[5m]) >= 0
-      )
-      or
-      (
-        node_timex_offset_seconds < -0.05
-      and
-        deriv(node_timex_offset_seconds[5m]) <= 0
-      )
-    for: 10m
-    labels:
-      severity: warning
-  - alert: NodeClockNotSynchronising
-    annotations:
-      description: "Clock on {{ $labels.instance }} is not synchronising. Ensure NTP is configured on this host."
-      summary: "Clock not synchronising."
-    expr: |
-      min_over_time(node_timex_sync_status[5m]) == 0
-      and
-      node_timex_maxerror_seconds >= 16
-    for: 10m
-    labels:
-      severity: warning
-  - alert: NodeRAIDDegraded
-    annotations:
-      description: "RAID array '{{ $labels.device }}' on {{ $labels.instance }} is in degraded state due to one or more disks failures. Number of spare drives is insufficient to fix issue automatically."
-      summary: "RAID Array is degraded"
-    expr: |
-      node_md_disks_required - ignoring (state) (node_md_disks{state="active"}) > 0
-    for: 15m
-    labels:
-      severity: critical
-  - alert: NodeRAIDDiskFailure
-    annotations:
-      description: "At least one device in RAID array on {{ $labels.instance }} failed. Array '{{ $labels.device }}' needs attention and possibly a disk swap."
-      summary: "Failed device in RAID array"
-    expr: node_md_disks{state="failed"} > 0
-    labels:
-      severity: warning
+  - name: probes
+    rules:
+      # Uptime of an Exposed Service (GLOSSARY.md). `tier`, `stack` and `container` come from
+      # the probed Service. Inhibited while InternetDown or Traefik's own Probe fails (alertmanager).
+      - alert: ProbeFailed
+        expr: probe_success{job="probe"} == 0
+        for: 3m
+        annotations:
+          summary: "{{ $labels.container }} is unreachable"
+          description: "The {{ $labels.module }} Probe of {{ $labels.container }} ({{ $labels.instance }}) has failed for 3 minutes."
 
-- name: cadvisor
-  rules:
-  - alert: ContainerMemoryUsageHigh
-    annotations:
-      summary: "Container {{ $labels.name }} memory usage is high"
-      description: "The container {{ $labels.name }} on instance {{ $labels.instance }} is using more than 80% of its allocated memory.\nVALUE = {{ $value }}\nLABELS = {{ $labels }}"
-    expr: (container_memory_usage_bytes{name!=""} / (container_spec_memory_limit_bytes{name!=""} > 0)) > 0.8
-    for: 5m
-    labels:
-      severity: warning
+      - alert: InternetDown
+        expr: max(probe_success{job="internet"}) == 0
+        for: 2m
+        labels:
+          tier: warning
+          stack: monitoring
+        annotations:
+          summary: The Internet is unreachable
+          description: Every Internet Probe has failed for 2 minutes; Probe alerts are inhibited.
 
-  - alert: ContainerMemoryAlmostOut
-    annotations:
-      summary: "Container {{ $labels.name }} memory almost full"
-      description: "The container {{ $labels.name }} on instance {{ $labels.instance }} is using more than 90% of its allocated memory.\nVALUE = {{ $value }}\nLABELS = {{ $labels }}"
-    expr: (container_memory_usage_bytes{name!=""} / (container_spec_memory_limit_bytes{name!=""} > 0)) > 0.9
-    for: 2m
-    labels:
-      severity: critical
+      # More than 5% of a Service's requests through Traefik are server errors (recording-rules.yml),
+      # with at least 5 in 10 minutes so a single failure at Probe-only traffic does not count.
+      # Digest regardless of the Service's Tier; ProbeFailed inhibits it (alertmanager). `stack`
+      # comes from the container; a Traefik service with no matching container reports as edge.
+      - alert: Http5xxRatio
+        expr: |
+          (
+              (container:traefik_service_5xx:ratio10m > 0.05 and container:traefik_service_5xx:rate10m * 600 >= 5)
+            * on (container) group_left (stack)
+              group by (container, stack) (
+                label_replace(label_replace(container_last_seen{name!=""}, "container", "$1", "name", "(.+)"),
+                  "stack", "$1", "container_label_com_docker_compose_project", "(.+)")
+              )
+          )
+          or on (container)
+            label_replace(container:traefik_service_5xx:ratio10m > 0.05 and container:traefik_service_5xx:rate10m * 600 >= 5,
+              "stack", "edge", "", "")
+        for: 10m
+        labels:
+          tier: warning
+        annotations:
+          summary: "{{ $labels.container }} is returning server errors"
+          description: "{{ $value | humanizePercentage }} of {{ $labels.container }}'s requests through Traefik have been 5xx for 10 minutes."
 
-  - alert: ContainerCPUThrottlingHigh
-    annotations:
-      summary: "Container {{ $labels.name }} experiencing high CPU throttling"
-      description: "The container {{ $labels.name }} on instance {{ $labels.instance }} is experiencing high CPU throttling.\nVALUE = {{ $value }}\nLABELS = {{ $labels }}"
-    expr: rate(container_cpu_cfs_throttled_periods_total{name!=""}[5m]) / rate(container_cpu_cfs_periods_total{name!=""}[5m]) > 0.2
-    for: 5m
-    labels:
-      severity: warning
+      # docker_sd lost its targets (docker-socket-proxy down or labels gone): Probes have gone silent.
+      - alert: ProbesMissing
+        expr: absent(probe_success{job="probe"})
+        for: 10m
+        labels:
+          tier: warning
+          stack: monitoring
+        annotations:
+          summary: No Probe results
+          description: Prometheus has no Probe targets; check docker-socket-proxy and the probe.url labels.
 
-  - alert: ContainerCPUUsageHigh
-    annotations:
-      summary: "Container {{ $labels.name }} CPU usage is high"
-      description: "The container {{ $labels.name }} on instance {{ $labels.instance }} is using more than 80% of its allocated CPU.\nVALUE = {{ $value }}\nLABELS = {{ $labels }}"
-    expr: rate(container_cpu_usage_seconds_total{name!=""}[2m]) > (container_spec_cpu_quota{name!=""} / container_spec_cpu_period{name!=""} * 0.8)
-    for: 5m
-    labels:
-      severity: warning
+  - name: containers
+    rules:
+      # A container nc8kg1101/ declares (homeops_container_declared: homelab-declared-containers, served by
+      # node-exporter) that cAdvisor has not seen for 2 minutes. Retiring or renaming a Stack, or
+      # removing a Service, in git removes it from the declared set, so neither fires; containers git
+      # never declared (doco-cd's self-applier, ad-hoc startup-order=skip runs) never fire. Keyed on
+      # Compose project + service, so a recreate that renames the container is not "down". `for: 5m`
+      # covers a first Deploy's image pull and the Deploy of monitoring trailing a removal. Held while
+      # cAdvisor is down: TargetDown reports that once. `name` (Compose's guess without
+      # container_name) only serves inhibitions on Services that set container_name; the text uses
+      # the Stack and Service.
+      - alert: ContainerDown
+        expr: |
+          max by (stack, service, name, tier) (homeops_container_declared{tier=~"critical|warning"})
+            unless on (stack, service)
+              label_replace(label_replace(
+                max_over_time(container_last_seen{container_label_com_docker_compose_project!=""}[2m]),
+                "stack", "$1", "container_label_com_docker_compose_project", "(.+)"),
+                "service", "$1", "container_label_com_docker_compose_service", "(.+)")
+            unless on () (up{job="cadvisor"} == 0)
+        for: 5m
+        annotations:
+          summary: "{{ $labels.stack }}/{{ $labels.service }} is not running"
+          description: "Service {{ $labels.service }} of Stack {{ $labels.stack }} is declared in nc8kg1101/, but no container of it has been seen running for 7 minutes."
 
-  - alert: ContainerRestarts
-    annotations:
-      summary: "Container {{ $labels.name }} restarted"
-      description: "The container {{ $labels.name }} on instance {{ $labels.instance }} has restarted {{ $value }} times in the last 15 minutes."
-    # cAdvisor has no restart counter; each restart gives the container a new start time.
-    expr: changes(container_start_time_seconds{name!=""}[15m]) >= 3
-    labels:
-      severity: critical
+      # node-exporter serves the declared set from its textfile; without it ContainerDown is blind.
+      # node-exporter being down is also TargetDown's.
+      - alert: DeclaredContainersMissing
+        expr: absent(homeops_container_declared)
+        for: 10m
+        labels:
+          tier: warning
+          stack: monitoring
+        annotations:
+          summary: No declared containers
+          description: "Prometheus has no homeops_container_declared for 10 minutes; check node-exporter's textfile (homelab-declared-containers). ContainerDown is blind."
 
+      # An interrupted Compose recreate (two deployers racing) leaves a running container named
+      # <id>_<name>; cAdvisor and Loki series then split. Compose's own recreates hold the name
+      # for seconds. Fix: recreate the service through doco-cd's REST API (README).
+      - alert: ContainerLeftoverName
+        expr: container_leftover_name == 1
+        for: 10m
+        labels:
+          tier: warning
+        annotations:
+          summary: "{{ $labels.container }} kept a temporary Compose name"
+          description: "{{ $labels.container }} ({{ $labels.stack }}/{{ $labels.service }}) has been running under Compose's temporary name for 10 minutes; recreate {{ $labels.service }}."
 
-# Indexer health from nzbhydra2's stats API (xfer/nzbhydra2-exporter).
-- name: nzbhydra2
-  rules:
-  - alert: NzbhydraStatsDown
-    annotations:
-      summary: nzbhydra2 indexer stats are unavailable
-      description: "nzbhydra2-exporter cannot read nzbhydra2's stats API (or cannot be scraped) for 10 minutes."
-    expr: up{job="nzbhydra2"} == 0 or nzbhydra2_up == 0
-    for: 10m
-    labels:
-      severity: warning
-      tier: warning
+      # The exporter answers but the Docker API behind docker-socket-proxy does not (proxy down, or
+      # rejecting its /v1.44 calls). The exporter being down is TargetDown's job; the proxy being
+      # down is ContainerDown's, which inhibits this (alertmanager).
+      - alert: ContainerHealthExporterBlind
+        expr: container_health_up == 0
+        for: 5m
+        labels:
+          tier: warning
+          name: docker-socket-proxy
+        annotations:
+          summary: container-health-exporter cannot read the Docker API
+          description: "container-health-exporter has not read the Docker API through docker-socket-proxy for 5 minutes; Uptime of Services that are not Exposed Services and ContainerLeftoverName are blind."
 
-  # hydra gave up on the indexer (e.g. bad credentials) until it is re-enabled by hand.
-  - alert: NzbhydraIndexerDisabled
-    annotations:
-      summary: "nzbhydra2 disabled indexer {{ $labels.indexer }}"
-      description: "{{ $labels.indexer }} is disabled by nzbhydra2. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
-    expr: nzbhydra2_indexer_state{state="DISABLED_SYSTEM"} == 1
-    for: 5m
-    labels:
-      severity: warning
-      tier: warning
+      - alert: ContainerRestarting
+        expr: |
+          sum by (name, container_label_tier, container_label_com_docker_compose_project) (
+            changes(container_start_time_seconds{container_label_tier=~"critical|warning", container_label_com_docker_compose_project!=""}[15m])
+          ) > 2
+        labels:
+          tier: "{{ $labels.container_label_tier }}"
+          stack: "{{ $labels.container_label_com_docker_compose_project }}"
+        annotations:
+          summary: "{{ $labels.name }} is restarting repeatedly"
+          description: "Container {{ $labels.name }} started {{ $value }} times in 15 minutes."
 
-  # Short backoffs after errors are routine; alert only when one lasts.
-  - alert: NzbhydraIndexerBackingOff
-    annotations:
-      summary: "nzbhydra2 indexer {{ $labels.indexer }} has been backing off for 30 minutes"
-      description: "{{ $labels.indexer }} is temporarily disabled after errors. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
-    expr: nzbhydra2_indexer_state{state="DISABLED_SYSTEM_TEMPORARY"} == 1
-    for: 30m
-    labels:
-      severity: warning
-      tier: warning
+      # The kernel killed a process in the container for exceeding its memory limit (the Baseline
+      # sets one on every Service, ADR 0006). Fires at the Service's Tier even when the container
+      # survives, e.g. when only a worker process was killed. Raise the limit or find the leak.
+      - alert: ContainerOOMKilled
+        expr: |
+          sum by (name, container_label_tier, container_label_com_docker_compose_project) (
+            increase(container_oom_events_total{container_label_tier=~"critical|warning", container_label_com_docker_compose_project!=""}[15m])
+          ) > 0
+        labels:
+          tier: "{{ $labels.container_label_tier }}"
+          stack: "{{ $labels.container_label_com_docker_compose_project }}"
+        annotations:
+          summary: "{{ $labels.name }} was OOM-killed"
+          description: "The kernel killed a process in {{ $labels.name }} for exceeding its memory limit in the last 15 minutes."
 
-  - alert: NzbhydraIndexerLimitNear
-    annotations:
-      summary: "{{ $labels.indexer }} has used {{ $value | humanizePercentage }} of its {{ $labels.limit }} limit"
-      description: "nzbhydra2 stops using {{ $labels.indexer }} when the daily {{ $labels.limit }} limit is reached."
-    expr: |
-      label_replace(nzbhydra2_indexer_api_hits / nzbhydra2_indexer_api_hit_limit, "limit", "API hit", "", "") > 0.9
-        or
-      label_replace(nzbhydra2_indexer_download_hits / nzbhydra2_indexer_download_hit_limit, "limit", "download", "", "") > 0.9
-    for: 15m
-    labels:
-      severity: warning
-      tier: warning
+      # A container with a health check that has not reported healthy for 5 minutes, at its own
+      # Tier (container-health-exporter copies the `tier` label). The only down alert for a Service
+      # nc8kg1101/ does not declare yet (the legacy groups), such as Outline's Datastores. A declared
+      # Service that stopped is ContainerDown's, and an Exposed Service's ProbeFailed explains it
+      # better; both inhibit this (alertmanager).
+      - alert: ContainerUnhealthy
+        expr: label_replace(container_healthy{tier=~"critical|warning", stack!=""}, "name", "$1", "container", "(.+)") == 0
+        for: 5m
+        annotations:
+          summary: "{{ $labels.container }} is unhealthy"
+          description: "{{ $labels.container }} ({{ $labels.stack }}) has not passed its health check for 5 minutes."
 
-  - alert: NzbhydraIndexerVipExpiring
-    annotations:
-      summary: "{{ $labels.indexer }} VIP expires in {{ $value | humanizeDuration }}"
-      description: "Renew the {{ $labels.indexer }} VIP membership."
-    expr: nzbhydra2_indexer_vip_expiry_timestamp_seconds - time() < 14 * 86400
-    for: 1h
-    labels:
-      severity: warning
-      tier: warning
+      # Only meaningful once a container has a memory limit.
+      - alert: ContainerMemoryNearLimit
+        expr: |
+          max by (name, container_label_com_docker_compose_project) (
+            container_memory_working_set_bytes{container_label_tier=~"critical|warning", container_label_com_docker_compose_project!=""}
+              / (container_spec_memory_limit_bytes > 0)
+          ) > 0.9
+        for: 15m
+        labels:
+          tier: warning
+          stack: "{{ $labels.container_label_com_docker_compose_project }}"
+        annotations:
+          summary: "{{ $labels.name }} is near its memory limit"
+          description: "{{ $labels.name }} is using {{ $value | humanizePercentage }} of its memory limit."
+
+  - name: host
+    rules:
+      - alert: HostOutOfMemory
+        expr: node_memory_MemAvailable_bytes{job="node-exporter"} / node_memory_MemTotal_bytes{job="node-exporter"} < 0.05
+        for: 5m
+        labels:
+          tier: warning
+          stack: host
+        annotations:
+          summary: Host memory is nearly exhausted
+          description: "Only {{ $value | humanizePercentage }} of memory is available."
+
+      # The Host's XFS filesystems; Docker's volumes live on /.
+      - alert: HostFilesystemAlmostFull
+        expr: |
+          node_filesystem_avail_bytes{job="node-exporter", fstype="xfs"} / node_filesystem_size_bytes{job="node-exporter", fstype="xfs"} < 0.10
+            and node_filesystem_readonly{job="node-exporter", fstype="xfs"} == 0
+        for: 30m
+        labels:
+          tier: warning
+          stack: host
+        annotations:
+          summary: "{{ $labels.mountpoint }} is almost full"
+          description: "Only {{ $value | humanizePercentage }} of {{ $labels.mountpoint }} is free."
+
+      # At the 6h trend, full within 4 hours: every Stack's writes fail then.
+      - alert: HostFilesystemFillingUp
+        expr: |
+          node_filesystem_avail_bytes{job="node-exporter", fstype="xfs"} / node_filesystem_size_bytes{job="node-exporter", fstype="xfs"} < 0.20
+            and predict_linear(node_filesystem_avail_bytes{job="node-exporter", fstype="xfs"}[6h], 4 * 3600) < 0
+            and node_filesystem_readonly{job="node-exporter", fstype="xfs"} == 0
+        for: 1h
+        labels:
+          tier: critical
+          stack: host
+        annotations:
+          summary: "{{ $labels.mountpoint }} will be full within 4 hours"
+          description: "{{ $labels.mountpoint }} has {{ $value | humanizePercentage }} free and is filling up."
+
+      - alert: HostConntrackNearLimit
+        expr: node_nf_conntrack_entries{job="node-exporter"} / node_nf_conntrack_entries_limit{job="node-exporter"} > 0.75
+        for: 5m
+        labels:
+          tier: warning
+          stack: host
+        annotations:
+          summary: Host conntrack table is {{ $value | humanizePercentage }} full
+
+      - alert: HostClockNotSynchronising
+        expr: min_over_time(node_timex_sync_status{job="node-exporter"}[5m]) == 0 and node_timex_maxerror_seconds{job="node-exporter"} >= 16
+        for: 10m
+        labels:
+          tier: warning
+          stack: host
+        annotations:
+          summary: Host clock is not synchronising
+
+  - name: deploys
+    rules:
+      # doco-cd retries a failed Deploy on every poll. One failure that a retry fixes is already
+      # reported through apprise; two or more in 10 minutes means the Stack is stuck.
+      - alert: DeployFailing
+        expr: sum by (deployment) (increase(doco_cd_deployment_errors_total{deployment!=""}[10m])) >= 2
+        labels:
+          tier: warning
+          stack: "{{ $labels.deployment }}"
+        annotations:
+          summary: "Deploys of {{ $labels.deployment }} keep failing"
+          description: "doco-cd failed to deploy {{ $labels.deployment }} {{ $value | humanize }} times in 10 minutes."
+
+      # Without polls, merged changes never reach the Host. Critical, as doco-cd is (asotbz/ops#302).
+      - alert: DeployPollFailing
+        expr: sum(increase(doco_cd_poll_errors_total[15m])) >= 3
+        labels:
+          tier: critical
+          stack: ops
+        annotations:
+          summary: doco-cd cannot poll the repository
+          description: "{{ $value | humanize }} polls of the repository failed in 15 minutes."
+
+  # Indexer health from nzbhydra2's stats API (xfer/nzbhydra2-exporter). Warning, as xfer is.
+  - name: nzbhydra2
+    rules:
+      - alert: NzbhydraStatsDown
+        expr: up{job="nzbhydra2"} == 0 or nzbhydra2_up == 0
+        for: 10m
+        labels:
+          tier: warning
+          stack: xfer
+        annotations:
+          summary: nzbhydra2 indexer stats are unavailable
+          description: "nzbhydra2-exporter cannot read nzbhydra2's stats API (or cannot be scraped) for 10 minutes."
+
+      # nzbhydra2 gave up on the indexer (e.g. bad credentials) until it is re-enabled by hand.
+      - alert: NzbhydraIndexerDisabled
+        expr: nzbhydra2_indexer_state{state="DISABLED_SYSTEM"} == 1
+        for: 5m
+        labels:
+          tier: warning
+          stack: xfer
+        annotations:
+          summary: "nzbhydra2 disabled indexer {{ $labels.indexer }}"
+          description: "{{ $labels.indexer }} is disabled by nzbhydra2. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
+
+      # Short backoffs after errors are routine; alert only when one lasts.
+      - alert: NzbhydraIndexerBackingOff
+        expr: nzbhydra2_indexer_state{state="DISABLED_SYSTEM_TEMPORARY"} == 1
+        for: 30m
+        labels:
+          tier: warning
+          stack: xfer
+        annotations:
+          summary: "nzbhydra2 indexer {{ $labels.indexer }} has been backing off for 30 minutes"
+          description: "{{ $labels.indexer }} is temporarily disabled after errors. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
+
+      - alert: NzbhydraIndexerLimitNear
+        expr: |
+          label_replace(nzbhydra2_indexer_api_hits / nzbhydra2_indexer_api_hit_limit, "limit", "API hit", "", "") > 0.9
+            or
+          label_replace(nzbhydra2_indexer_download_hits / nzbhydra2_indexer_download_hit_limit, "limit", "download", "", "") > 0.9
+        for: 15m
+        labels:
+          tier: warning
+          stack: xfer
+        annotations:
+          summary: "{{ $labels.indexer }} has used {{ $value | humanizePercentage }} of its {{ $labels.limit }} limit"
+          description: "nzbhydra2 stops using {{ $labels.indexer }} when the daily {{ $labels.limit }} limit is reached."
+
+      - alert: NzbhydraIndexerVipExpiring
+        expr: nzbhydra2_indexer_vip_expiry_timestamp_seconds - time() < 14 * 86400
+        for: 1h
+        labels:
+          tier: warning
+          stack: xfer
+        annotations:
+          summary: "{{ $labels.indexer }} VIP expires in {{ $value | humanizeDuration }}"
+          description: "Renew the {{ $labels.indexer }} VIP membership."
