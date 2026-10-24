@@ -1,7 +1,8 @@
-"""Read tools/validate/args as data: each line one homelab-validate option and its value, from a short allowlist.
+"""Read tools/validate/args as data: each line one homelab-validate option and its value, nothing else.
 
 Run as a script, it prints the arguments shell-quoted (`shlex.join`) for the reusable workflow's `extra-args`,
-which splits them with `shlex.split`. Any malformed line fails, so the file cannot inject another option.
+which splits them with `shlex.split`. Any other line fails, so the file cannot inject another option;
+homelab-validate itself rejects an unknown input name.
 """
 import re
 import shlex
@@ -9,11 +10,6 @@ import sys
 from pathlib import Path
 
 ARGS = Path(__file__).resolve().parent / "args"
-# homelab-validate's inputs (validate README, "Inputs").
-INPUTS = {
-    "prometheus", "rule-tests", "alertmanager", "loki", "alloy", "grafana", "dashboards-json", "dashboards",
-    "declared-containers", "blackbox", "traefik",
-}
 LEGACY_STACK = re.compile(r"--legacy-stack ([a-z0-9][a-z0-9-]*)")
 PATH = re.compile(r"--path (([a-z][a-z0-9-]*)=([^\s-][^\s]*))")
 
@@ -27,8 +23,6 @@ def parse(path: Path, n: int, line: str) -> tuple[str, str, str]:
     if m := LEGACY_STACK.fullmatch(line):
         return "--legacy-stack", m[1], f"--legacy-stack {m[1]}"
     if m := PATH.fullmatch(line):
-        if m[2] not in INPUTS:
-            raise ArgsError(f"{path}: line {n}: unknown input {m[2]!r} (known: {', '.join(sorted(INPUTS))})")
         return "--path", m[1], f"--path {m[2]}"
     raise ArgsError(f"{path}: line {n}: want '--legacy-stack NAME' or '--path NAME=PATH': {line!r}")
 

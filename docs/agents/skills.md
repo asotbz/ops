@@ -35,4 +35,5 @@ format.
 
 ## Updates
 
-Renovate bumps the wrapper's `tag` and `commit` together in their own PR; review the release before merging.
+Renovate bumps the wrapper's `tag` and `commit` together in their own PR. Patch releases automerge once CI
+passes (the shared preset); review minor and major releases before merging.

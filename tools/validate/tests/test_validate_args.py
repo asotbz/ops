@@ -22,7 +22,6 @@ BAD_LINES = [
     "--legacy-volume common_data",
     "--path prometheus=nc8kg1101/monitoring/prometheus --help",
     "--path prometheus=--help",
-    "--path nonsense=nc8kg1101/monitoring/prometheus",
     "--path prometheus",
     "--path prometheus=",
     "--path prometheus=a\tb",

@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: validate-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a PR's superseded runs; every commit on main keeps its own result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Shared Repo Tooling: reusable workflows from jbruns/homelab-components, pinned by commit; Renovate bumps them
 # together (repo-ci-vX.Y.Z). Each installs its tool from its own commit unless tool-ref says otherwise.
