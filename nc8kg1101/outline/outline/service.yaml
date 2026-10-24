@@ -13,7 +13,8 @@ services:
     deploy:
       resources:
         limits:
-          # 7-day peak under Portainer: 426MiB (#303); about 1.5x, rounded up.
+          # 7-day peak under Portainer: 426MiB (#303). Above the Baseline's 1.5x until a 30-day peak
+          # exists to size it by.
           memory: 1G
     healthcheck:
       # As the image's own HEALTHCHECK.

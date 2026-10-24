@@ -15,7 +15,7 @@ services:
       resources:
         limits:
           # 7-day peak of the Postgres it shared with Authentik under Portainer: 328MiB (#303), for
-          # both databases; Outline's is 14MB of them, so this keeps 1.5x the whole peak.
+          # both databases; Outline's alone is smaller. Above 1.5x that whole peak.
           memory: 512M
     stop_grace_period: 60s
     healthcheck:
