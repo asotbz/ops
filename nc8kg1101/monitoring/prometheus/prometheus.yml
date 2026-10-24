@@ -144,6 +144,7 @@ scrape_configs:
   # A Protected Service (ADR 0005) carries a second Probe, `probe.idp_url`: its login path must
   # answer an anonymous request with a redirect to the IdP (blackbox.yml http_idp_redirect, never
   # followed). `auth` names the mechanism: forward unless the Service sets `probe.idp_auth: oidc`.
+  # http_idp_redirect only knows native OIDC's redirect; forward auth (#289) adds its own module.
   # Same discovery and labels as `probe`.
   - job_name: probe-idp
     scrape_interval: 60s

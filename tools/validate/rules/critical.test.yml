@@ -57,6 +57,27 @@ tests:
         eval_time: 4m
         exp_samples: []
 
+  # A failed probe-idp Probe means the Service answered but did not send the user to the IdP.
+  - name: ProbeFailed says which Probe failed
+    interval: 1m
+    input_series:
+      - series: probe_success{job="probe",container="outline",module="http_2xx",instance="https://oln.example/_health",tier="critical",stack="outline"}
+        values: 0x4
+      - series: probe_success{job="probe-idp",container="outline",module="http_idp_redirect",instance="https://oln.example/auth/oidc",tier="critical",stack="outline"}
+        values: 0x4
+    alert_rule_test:
+      - alertname: ProbeFailed
+        eval_time: 3m
+        exp_alerts:
+          - exp_labels: {job: probe, container: outline, module: http_2xx, instance: "https://oln.example/_health", tier: critical, stack: outline}
+            exp_annotations:
+              summary: outline is unreachable
+              description: "The http_2xx Probe of outline (https://oln.example/_health) has failed for 3 minutes."
+          - exp_labels: {job: probe-idp, container: outline, module: http_idp_redirect, instance: "https://oln.example/auth/oidc", tier: critical, stack: outline}
+            exp_annotations:
+              summary: outline does not send sign-in to the IdP
+              description: "The http_idp_redirect Probe of outline (https://oln.example/auth/oidc) has failed for 3 minutes: its login path did not redirect to the IdP's authorize endpoint."
+
   # ContainerDown: a container nc8kg1101/ declares (homeops_container_declared, homelab-declared-containers)
   # that cAdvisor has not seen for 2 minutes, for 5 minutes.
   - name: ContainerDown fires for a declared container that stopped and clears when it returns

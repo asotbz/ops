@@ -32,8 +32,8 @@ groups:
         expr: probe_success{job=~"probe|probe-idp"} == 0
         for: 3m
         annotations:
-          summary: "{{ $labels.container }} is unreachable"
-          description: "The {{ $labels.module }} Probe of {{ $labels.container }} ({{ $labels.instance }}) has failed for 3 minutes."
+          summary: '{{ $labels.container }} {{ if eq $labels.job "probe-idp" }}does not send sign-in to the IdP{{ else }}is unreachable{{ end }}'
+          description: "The {{ $labels.module }} Probe of {{ $labels.container }} ({{ $labels.instance }}) has failed for 3 minutes{{ if eq $labels.job \"probe-idp\" }}: its login path did not redirect to the IdP's authorize endpoint{{ end }}."
 
       - alert: InternetDown
         expr: max(probe_success{job="internet"}) == 0

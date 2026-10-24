@@ -44,7 +44,8 @@ modules:
   # A Protected Service's `probe.idp_url` (job probe-idp): its login path answers an anonymous
   # request by redirecting to the IdP's authorize endpoint. Not followed, so the IdP is never touched.
   # blackbox searches the header unanchored, so the regexp anchors the IdP's exact origin and path
-  # (tools/monitoring/tests/test_blackbox_idp_redirect.py).
+  # (tools/monitoring/tests/test_blackbox_idp_redirect.py). Monitoring checks the IdP itself, so it may
+  # name its address and path; ADR 0005 keeps that out of Services. Change both with the IdP.
   http_idp_redirect:
     prober: http
     timeout: 8s

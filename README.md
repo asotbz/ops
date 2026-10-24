@@ -62,8 +62,9 @@ Deleting a Stack folder removes the Stack from the Host but keeps its data volum
 The monitoring Stack keeps this Host's telemetry on the Host ([ADR 0011](docs/adr/0011-host-keeps-its-own-telemetry.md)):
 
 - Prometheus scrapes the exporters on `metrics`, and blackbox-exporter probes every Service with a `probe.url` label
-  (`probe.module` picks the expected answer). A Protected Service also carries `probe.idp_url`, its login path,
-  which must redirect to the IdP (`probe.idp_auth: oidc` for native OIDC).
+  (`probe.module` picks the expected answer). A Service Protected by native OIDC also carries `probe.idp_url`, its
+  login path, which must redirect to the IdP's authorize endpoint, and `probe.idp_auth: oidc`. Forward auth's first
+  redirect goes to the outpost instead, so its Probe module comes with forward auth (#289).
 - Alloy ships every container's logs, labelled by `stack`, `service` and `tier`, and Traefik's access log to Loki.
 - Each alerting rule carries the Stack's `tier`. Alertmanager pages Pushover for `critical`, posts `critical` and
   `warning` to the Discord Digest grouped per Stack, drops `info`, and pings a healthchecks.io Heartbeat every
