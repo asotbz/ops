@@ -12,6 +12,8 @@ tests:
         values: 0+0x5 1+0x2
       - series: up{job="probe",tier="critical",stack="edge"}
         values: 0+0x8
+      - series: up{job="probe-idp",tier="critical",stack="app"}
+        values: 0+0x8
       - series: up{job="dependency",tier="warning",stack="external"}
         values: 0+0x8
     promql_expr_test:
@@ -27,10 +29,12 @@ tests:
         eval_time: 6m
         exp_samples: []
 
-  - name: ProbeFailed carries the probed Service's routing and inhibition labels
+  - name: ProbeFailed carries the probed Service's routing and inhibition labels, for both Probes of a Protected Service
     interval: 1m
     input_series:
       - series: probe_success{job="probe",container="outline",tier="critical",stack="asot"}
+        values: 0+0x3 1+0x2
+      - series: probe_success{job="probe-idp",container="web",tier="critical",stack="app"}
         values: 0+0x3 1+0x2
       - series: probe_success{job="probe",container="loki",tier="warning",stack="monitoring"}
         values: 0+0x3 1+0x2
@@ -45,11 +49,34 @@ tests:
         exp_samples:
           - labels: '{alertname="ProbeFailed",tier="critical",stack="asot",container="outline",job="probe"}'
             value: 1
+          - labels: '{alertname="ProbeFailed",tier="critical",stack="app",container="web",job="probe-idp"}'
+            value: 1
           - labels: '{alertname="ProbeFailed",tier="warning",stack="monitoring",container="loki",job="probe"}'
             value: 1
       - expr: *probe
         eval_time: 4m
         exp_samples: []
+
+  # A failed probe-idp Probe means the Service answered but did not send the user to the IdP.
+  - name: ProbeFailed says which Probe failed
+    interval: 1m
+    input_series:
+      - series: probe_success{job="probe",container="outline",module="http_2xx",instance="https://oln.example/_health",tier="critical",stack="outline"}
+        values: 0x4
+      - series: probe_success{job="probe-idp",container="outline",module="http_idp_redirect",instance="https://oln.example/auth/oidc",tier="critical",stack="outline"}
+        values: 0x4
+    alert_rule_test:
+      - alertname: ProbeFailed
+        eval_time: 3m
+        exp_alerts:
+          - exp_labels: {job: probe, container: outline, module: http_2xx, instance: "https://oln.example/_health", tier: critical, stack: outline}
+            exp_annotations:
+              summary: outline is unreachable
+              description: "The http_2xx Probe of outline (https://oln.example/_health) has failed for 3 minutes."
+          - exp_labels: {job: probe-idp, container: outline, module: http_idp_redirect, instance: "https://oln.example/auth/oidc", tier: critical, stack: outline}
+            exp_annotations:
+              summary: outline does not send sign-in to the IdP
+              description: "The http_idp_redirect Probe of outline (https://oln.example/auth/oidc) has failed for 3 minutes: its login path did not redirect to the IdP's authorize endpoint."
 
   # ContainerDown: a container nc8kg1101/ declares (homeops_container_declared, homelab-declared-containers)
   # that cAdvisor has not seen for 2 minutes, for 5 minutes.

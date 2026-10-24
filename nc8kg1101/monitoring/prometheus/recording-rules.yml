@@ -64,8 +64,8 @@ groups:
         label_replace(container_route_code:traefik_router_requests:rate10m, "code_class", "${1}xx", "code", "(.).."))
 
 # Uptime and Availability (GLOSSARY.md). An Exposed Service is up while every one of its Probes
-# succeeds; any other Service while its health check reports healthy (container-health-exporter).
-# Containers with neither have no Uptime. Docker briefly renames a container it is recreating
+# succeeds, a Protected Service's probe-idp redirect included; any other Service while its health
+# check reports healthy (container-health-exporter). Containers with neither have no Uptime. Docker briefly renames a container it is recreating
 # to `<12 hex>_<name>`; those are not Services. A Service whose container is gone loses its Probe
 # target and health series, so it reads 0 while it is still declared (homeops_container_declared)
 # and one of those series existed within the day; after that day, or once it is no longer declared,
@@ -79,7 +79,7 @@ groups:
   - record: service:uptime:ok
     expr: |
       (
-        min by (container, stack, tier) (probe_success{job="probe"})
+        min by (container, stack, tier) (probe_success{job=~"probe|probe-idp"})
         or on (container)
         max by (container, stack, tier) (container_healthy{job="container-health", container!~"[0-9a-f]{12}_.+"})
       )
@@ -87,7 +87,7 @@ groups:
       (
         0 * (
           (
-            max by (container, stack, tier) (max_over_time(probe_success{job="probe"}[1d]))
+            max by (container, stack, tier) (max_over_time(probe_success{job=~"probe|probe-idp"}[1d]))
             unless on () (up{job="blackbox-exporter"} == 0)
           )
           or on (container)

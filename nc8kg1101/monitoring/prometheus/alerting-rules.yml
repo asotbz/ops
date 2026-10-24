@@ -17,7 +17,7 @@ groups:
       # `tier` and `stack` come from the scrape target's labels (prometheus.yml).
       # For Probe jobs `up` only says blackbox-exporter answered; its own job covers that.
       - alert: TargetDown
-        expr: up{job!~"probe|internet|dependency"} == 0
+        expr: up{job!~"probe|probe-idp|internet|dependency"} == 0
         for: 5m
         annotations:
           summary: "{{ $labels.job }} scrape target is down"
@@ -25,14 +25,15 @@ groups:
 
   - name: probes
     rules:
-      # Uptime of an Exposed Service (GLOSSARY.md). `tier`, `stack` and `container` come from
-      # the probed Service. Inhibited while InternetDown or Traefik's own Probe fails (alertmanager).
+      # Uptime of an Exposed Service (GLOSSARY.md), and a Protected Service's redirect to the IdP
+      # (probe-idp). `tier`, `stack` and `container` come from the probed Service. Inhibited while
+      # InternetDown or Traefik's own Probe fails (alertmanager).
       - alert: ProbeFailed
-        expr: probe_success{job="probe"} == 0
+        expr: probe_success{job=~"probe|probe-idp"} == 0
         for: 3m
         annotations:
-          summary: "{{ $labels.container }} is unreachable"
-          description: "The {{ $labels.module }} Probe of {{ $labels.container }} ({{ $labels.instance }}) has failed for 3 minutes."
+          summary: '{{ $labels.container }} {{ if eq $labels.job "probe-idp" }}does not send sign-in to the IdP{{ else }}is unreachable{{ end }}'
+          description: "The {{ $labels.module }} Probe of {{ $labels.container }} ({{ $labels.instance }}) has failed for 3 minutes{{ if eq $labels.job \"probe-idp\" }}: its login path did not redirect to the IdP's authorize endpoint{{ end }}."
 
       - alert: InternetDown
         expr: max(probe_success{job="internet"}) == 0
