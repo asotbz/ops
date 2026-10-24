@@ -70,8 +70,8 @@ groups:
 # target and health series, so it reads 0 while it is still declared (homeops_container_declared)
 # and one of those series existed within the day; after that day, or once it is no longer declared,
 # it drops out (ContainerDown keeps alerting). While blackbox-exporter or container-health-exporter
-# is down or blind there is no zero-fill: a blind exporter is not downtime, and TargetDown and
-# ContainerHealthExporterBlind say so. Availability is the rolling 1d share of Uptime; read it at
+# is down or blind, its own series are not zero-filled (the other exporter's still are): a blind
+# exporter is not downtime, and TargetDown and ContainerHealthExporterBlind say so. Availability is the rolling 1d share of Uptime; read it at
 # midnight for daily figures, or average it for longer periods.
 - name: availability
   interval: 1m
@@ -85,16 +85,19 @@ groups:
       )
       or on (container)
       (
-        (
-          0 * (
+        0 * (
+          (
             max by (container, stack, tier) (max_over_time(probe_success{job="probe"}[1d]))
-            or on (container)
-            max by (container, stack, tier) (max_over_time(container_healthy{job="container-health", container!~"[0-9a-f]{12}_.+"}[1d]))
+            unless on () (up{job="blackbox-exporter"} == 0)
           )
-          and on (container)
-          label_replace(homeops_container_declared, "container", "$1", "name", "(.+)")
+          or on (container)
+          (
+            max by (container, stack, tier) (max_over_time(container_healthy{job="container-health", container!~"[0-9a-f]{12}_.+"}[1d]))
+            unless on () (up{job="container-health"} == 0 or container_health_up == 0)
+          )
         )
-        unless on () (up{job=~"blackbox-exporter|container-health"} == 0 or container_health_up == 0)
+        and on (container)
+        label_replace(homeops_container_declared, "container", "$1", "name", "(.+)")
       )
   - record: service:availability:ratio1d
     expr: avg_over_time(service:uptime:ok[1d])
