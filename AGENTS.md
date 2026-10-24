@@ -28,7 +28,7 @@ Declared state (anything under `nc8kg1101/`, `hosts.yaml`, `.sops.yaml`) changes
 
 SSH access to the Host comes from the gitignored repo-root `.env`, keyed per Host; see `.env.example` for its keys. Only @jbruns edits `.env`.
 
-Keep every secret value out of tool output, logs and commits, whether it comes from `.env`, a decrypted SOPS file or the Host. Read a secret file by key name only (`sops -d <file> | cut -d= -f1`). Compare values by exit code or hash. Pipe a new secret from a script straight into `sops set` and its consumer.
+Keep every secret value out of tool output, logs and commits, whether it comes from `.env`, a decrypted SOPS file or the Host. Read a secret file by key name only: `sops -d <file> | cut -d= -f1` for a dotenv file, `sops -d --output-type json <file> | jq -r 'paths(scalars) | map(tostring) | join(".")'` for YAML or JSON. Never decrypt a file with no keys (such as a `*.sops.txt`) to output. Compare values by exit code or hash. Pipe a new secret from a script straight into `sops set` and its consumer.
 
 ### Host access
 

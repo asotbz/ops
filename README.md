@@ -54,9 +54,9 @@ Deleting a Stack folder removes the Stack from the Host but keeps its data volum
 ## Secrets
 
 - Every secret is SOPS-encrypted with age. `.sops.yaml` lists the recipients.
-- Each Host has its own age key. nc8kg1101's private key lives only on the Host, for doco-cd, and in an offline backup. @jbruns holds a separate editing key. Files are moving from the old shared key to per-Host keys in [#298](https://github.com/asotbz/ops/issues/298).
+- Each Host has its own age key. nc8kg1101's private key lives only on the Host, for doco-cd, and offline with @jbruns. @jbruns holds a separate editing key. Files are moving from the old shared key to per-Host keys in [#298](https://github.com/asotbz/ops/issues/298).
 - Edit a Stack's values with `sops nc8kg1101/<stack>/.sops.env`. Plaintext `*.env` files are gitignored; encrypted files are named `*.sops.*` and tracked.
-- Never print a secret value. Read a SOPS file by key name only: `sops -d <file> | cut -d= -f1`.
+- Never print a secret value; read SOPS files by key name only (see [AGENTS.md](AGENTS.md#secrets)).
 
 ## Shared Repo Tooling
 
