@@ -54,7 +54,8 @@ services:
       - proxy
 
 volumes:
-  # Logs are not backed up (no stack-back label); 14d retention. Created empty at the cutover.
+  # Logs are not backed up (no stack-back label); 14d retention. Compose creates it empty at the cutover.
   loki_data:
     name: monitoring_loki_data
-    external: true
+    labels:
+      homeops.regenerable: "Loki's last 14 days of logs, not backed up; losing them loses history, not function"
