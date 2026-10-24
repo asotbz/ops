@@ -4,8 +4,6 @@ GitOps for the self-hosted Services on nc8kg1101, a plain Linux Host. Every Stac
 
 Terms used here (Stack, Platform Stack, Service, Datastore, Deploy, Baseline, Tier, ...) are defined in [GLOSSARY.md](GLOSSARY.md). Design decisions are recorded in [docs/adr](docs/adr). Agents start at [AGENTS.md](AGENTS.md).
 
-nc4kg1201 also lives in this repo, under `nc4kg1201/`, but this repo's tooling and docs do not manage it.
-
 ## Layout
 
 | Path | Contents |

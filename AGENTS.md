@@ -18,7 +18,7 @@ Single-context: root `GLOSSARY.md` and `docs/adr/`. Before exploring the codebas
 
 ### Scope
 
-This repo's tooling manages nc8kg1101 only, the one Host declared in `hosts.yaml`. Leave `nc4kg1201/` alone.
+This repo's tooling manages nc8kg1101 only, the one Host declared in `hosts.yaml`.
 
 ### Declared state
 
