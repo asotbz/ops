@@ -1,0 +1,96 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+# Shared Repo Tooling: reusable workflows from jbruns/homelab-components, pinned by commit; Renovate bumps them
+# together (repo-ci-vX.Y.Z). Each installs its tool from its own commit unless tool-ref says otherwise.
+jobs:
+  tool-tests:
+    name: tool tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python3 -m pip install --quiet --requirement tools/requirements-test.txt
+      - run: python3 -m pytest tools
+
+  # tools/validate/args: the legacy-stack exceptions and every input as an explicit --path.
+  validate-args:
+    name: validate args
+    runs-on: ubuntu-24.04
+    outputs:
+      args: ${{ steps.args.outputs.args }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            tools/validate/args
+            tools/validate/validate_args.py
+          sparse-checkout-cone-mode: false
+      # validate_args.py refuses a malformed line and shell-quotes the rest for repo-validate's shlex.split.
+      - id: args
+        run: |
+          args=$(python3 tools/validate/validate_args.py)
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
+  # tool-ref: --legacy-stack and the monitoring fix (jbruns/homelab-components#17) until validate-v1.1.0 ships in
+  # a repo-ci release; then bump the pins and drop tool-ref.
+  repo:
+    name: secrets, env, compose, cloudflare, isolation
+    needs: validate-args
+    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+    with:
+      checks: secrets env compose cloudflare isolation
+      extra-args: ${{ needs.validate-args.outputs.args }}
+      tool-ref: ca0e27945953fad76fbfd1c812a1f74bc37d2c15
+
+  monitoring:
+    name: monitoring configs, rules, dashboards, Grafana
+    needs: validate-args
+    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+    with:
+      checks: monitoring
+      timeout-minutes: 10
+      extra-args: ${{ needs.validate-args.outputs.args }}
+      tool-ref: ca0e27945953fad76fbfd1c812a1f74bc37d2c15
+
+  declared-containers:
+    name: declared containers
+    uses: jbruns/homelab-components/.github/workflows/repo-declared-containers.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+
+  # The one-time full-history scan ran before adoption (asotbz/ops#308: 597 commits, no leaks).
+  gitleaks:
+    name: gitleaks
+    uses: jbruns/homelab-components/.github/workflows/repo-gitleaks.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+
+  tooling:
+    name: renovate config, actionlint
+    uses: jbruns/homelab-components/.github/workflows/repo-lint.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+
+  # The single required check on main: fails unless every job above succeeded.
+  validate:
+    name: validate
+    if: always()
+    needs: [tool-tests, validate-args, repo, monitoring, declared-containers, gitleaks, tooling]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != success ]; then
+              echo "::error::a needed job ended $result: $RESULTS"
+              exit 1
+            fi
+          done
+          echo "all checks passed"

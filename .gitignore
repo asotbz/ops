@@ -2,3 +2,5 @@
 .env
 !*.sops.env
 .worktrees/
+.agents/skills/
+__pycache__/

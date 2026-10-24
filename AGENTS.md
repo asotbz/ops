@@ -1,8 +1,9 @@
 ## Agent skills
 
-Pinned agent-skills setup arrives with the shared Repo Tooling
-([jbruns/homelab-components#9](https://github.com/jbruns/homelab-components/issues/9)). Until this
-repo adopts it, use whatever skills your session already has.
+Before repository work, run `tools/agent-skills/setup-agent-skills check`. If it fails,
+run `tools/agent-skills/setup-agent-skills`, then start a fresh agent session to discover
+the pinned skills. Invoke applicable installed skills before proceeding.
+For installation, pin updates, or recovery, read `docs/agents/skills.md`.
 
 ### Issue tracker
 
@@ -23,6 +24,15 @@ This repo's tooling manages nc8kg1101 only, the one Host declared in `hosts.yaml
 ### Declared state
 
 Declared state (anything under `nc8kg1101/`, `hosts.yaml`, `.sops.yaml`) changes only through a PR. doco-cd Deploys `main` (ADR 0001); never edit or deploy Stacks on the Host by hand.
+
+### Checks
+
+CI (`.github/workflows/validate.yaml`) must pass before a PR merges; its `validate` job is the required check on
+`main`. Run the same checks locally before opening a PR (README.md, [Checks](README.md#checks)):
+`tools/validate/homelab-validate`, `homelab-declared-containers --check` and `python3 -m pytest tools`.
+
+A legacy group's exception is its `--legacy-stack` line in `tools/validate/args`. Never add one; the cutover PR
+for that group removes it.
 
 ### Secrets
 

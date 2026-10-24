@@ -1,6 +1,7 @@
 # Hosts the shared Repo Tooling manages (docs/adr/0012-shared-repo-tooling.md).
 version: 1
 default_branch: main
+validate: [tools/validate/homelab-validate, secrets, env, compose]   # what `hops bump` runs before it commits
 hosts:
   nc8kg1101:
     stack_root: nc8kg1101
