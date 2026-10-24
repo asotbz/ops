@@ -1,0 +1,13 @@
+# Hosts the shared Repo Tooling manages (docs/adr/0012-shared-repo-tooling.md).
+# nc4kg1201 is deliberately not declared, so the tooling leaves it alone.
+version: 1
+default_branch: main
+hosts:
+  nc8kg1101:
+    stack_root: nc8kg1101
+    deployer: doco-cd
+    capabilities: []
+    doco_cd:
+      # doco-cd runs in the ops Platform Stack, not a Stack of its own.
+      stack: ops
+      api_secret: ops/doco-cd/api_secret.sops.txt
