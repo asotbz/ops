@@ -1,18 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 services:
   loki:
-    image: grafana/loki:3.7.7
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193
     container_name: loki
-    user: ${MONITORING_UID}:${MONITORING_GID}
-    security_opt:
-      - no-new-privileges=true
-    restart: unless-stopped
+    # The image's user (10001); Docker copies the image's /loki, owned by it, onto the empty volume.
+    deploy:
+      resources:
+        limits:
+          # 137M working set at cutover, with no retention yet (it kept logs in /tmp)
+          memory: 768M
     command: -config.file=/etc/loki/loki.yaml
     labels:
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: monitoring
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "1"
+      baseline.exempt.healthcheck: "distroless image: no shell, wget or curl to run a healthcheck with"
 
+      # A remote Grafana reads it as a datasource (ADR 0011), through Traefik with basic auth.
       traefik.enable: true
 
       # Listen on http, but redirect all requests to https
@@ -28,38 +35,26 @@ services:
       traefik.http.routers.loki-https.service: loki
       traefik.http.routers.loki-https.middlewares: loki-chain
 
+      # Probe (GLOSSARY.md): the public path a user takes; see prometheus.yml
+      probe.url: https://loki.${DOMAIN}/ready
+      probe.module: http_auth
+
       # grafana: a read-only datasource consumer, with its own credential.
       traefik.http.middlewares.loki-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH},grafana:${LOKI_GRAFANA_PASSWORD_HASH}
       traefik.http.middlewares.loki-chain.chain.middlewares: crowdsec-bouncer,loki-auth
 
       traefik.http.services.loki.loadbalancer.server.port: 3100
-
-      # network policy
-      whalewall.enabled: true
-      whalewall.rules: |
-        output:
-          # prometheus, grafana, alertmanager, promtail: data collection
-          - network: common_backend
-            container: prometheus
-          - network: common_backend
-            container: grafana
-          - network: common_backend
-            container: alertmanager
-          - network: common_backend
-            container: promtail
-          # reverse proxy
-          - network: common_backend
-            container: traefik
-    logging:
-      driver: json-file
-      options:
-        max-size: 1m
-        max-file: 1
-        tag: "{{.Name}}"
     volumes:
       - ./loki.yaml:/etc/loki/loki.yaml:ro
-      - ./rules.yaml:/etc/loki/rules/fake/loki-rules.yml:ro
+      - loki_data:/loki
     networks:
-      - backend
+      # Alloy pushes and hops queries here (loki:3100 on monitoring_default)
+      - default
       # Routed by edge's Traefik (ADR 0002)
       - proxy
+
+volumes:
+  # Logs are not backed up (no stack-back label); 14d retention. Created empty at the cutover.
+  loki_data:
+    name: monitoring_loki_data
+    external: true

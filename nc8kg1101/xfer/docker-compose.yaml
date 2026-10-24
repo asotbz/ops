@@ -14,6 +14,10 @@ networks:
   forward-proxy:
     name: forward-proxy
     external: true
+  # Prometheus and the exporters it scrapes; owned by the monitoring Stack (ADR 0002)
+  metrics:
+    name: metrics
+    external: true
 
 # Remaining services in the stack have their own Compose configuration. 
 include:

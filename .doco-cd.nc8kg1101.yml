@@ -5,7 +5,7 @@
 #
 # doco-cd deploys every Stack it finds at nc8kg1101/<stack>/compose.yaml; the folder name is the
 # Compose project name. The legacy nc8kg1101/<group>/docker-compose.yaml Stacks (asot, common,
-# monitoring, xfer) never match compose_files, so doco-cd never deploys them; and since delete only
+# xfer) never match compose_files, so doco-cd never deploys them; and since delete only
 # removes projects doco-cd itself labelled, it never removes them either. A cutover that adds a
 # compose.yaml to one of those folders hands that project to doco-cd on merge.
 #

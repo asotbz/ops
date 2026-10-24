@@ -1,0 +1,27 @@
+# Modules a Service picks with its `probe.module` label (default http_2xx), and that a
+# Dependency Probe names in `module` (prometheus/dependencies.yml).
+modules:
+  http_2xx:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: []  # 2xx
+
+  # Behind basic auth: a 401 from the Service itself means it is up.
+  http_auth:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: [401]
+
+  # Denies anonymous requests by design (mitmproxy's web UI, openresty's `location /`): a 403 from
+  # the Service itself means it is up; Traefik answers 502 or 404 when it is not.
+  http_403:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: [403]
+
+  tcp_connect:
+    prober: tcp
+    timeout: 8s

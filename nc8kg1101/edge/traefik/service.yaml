@@ -77,10 +77,6 @@ services:
       startup-order: "0"
       stack-back.volumes: true
       stack-back.volumes.include: "traefik_le"
-      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: edge
 
       # Traefik Dashboard
       traefik.enable: true
@@ -98,8 +94,9 @@ services:
       traefik.http.routers.traefik-https.service: api@internal
       traefik.http.routers.traefik-https.middlewares: traefik-dashboard
 
-      # Probe (GLOSSARY.md): the public path a user takes. Unused until monitoring is cut over.
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
       probe.url: https://traefik.${DOMAIN}/
+      probe.module: http_auth
 
       traefik.http.middlewares.traefik-auth.basicauth.users: ${TRAEFIK_USER}:${TRAEFIK_PASSWORD_HASH}
       traefik.http.middlewares.traefik-dashboard.chain.middlewares: crowdsec-bouncer,traefik-auth

@@ -21,10 +21,8 @@ services:
     depends_on:
       - nzbhydra2
     labels:
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: xfer
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: info
     logging:
       driver: json-file
       options:
@@ -35,3 +33,5 @@ services:
       - ./nzbhydra2_exporter.py:/app/nzbhydra2_exporter.py:ro
     networks:
       - backend
+      # Prometheus scrapes nzbhydra2-exporter:9811
+      - metrics

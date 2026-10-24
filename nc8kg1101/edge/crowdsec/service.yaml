@@ -31,10 +31,6 @@ services:
       startup-order: "0"
       stack-back.volumes: true
       stack-back.volumes.include: "crowdsec_data,crowdsec_config"
-      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: edge
     volumes:
       - crowdsec_log:/var/log/crowdsec
       - crowdsec_data:/var/lib/crowdsec/data
