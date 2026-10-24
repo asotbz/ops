@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+# doco-cd deploys every Stack under nc8kg1101/ from this repo (ADR 0001), this one included. Its deploy
+# config is .doco-cd.nc8kg1101.yml at the repo root. Bootstrapped once by scripts/bootstrap-nc8kg1101.sh;
+# after that it replaces itself when this file changes. Its Baseline items are inline: extending
+# _baseline.yaml would race its own self-update.
+services:
+  doco-cd:
+    # Pinned by digest: a self-updating deployer must never move on its own (Renovate bumps it).
+    image: ghcr.io/kimdre/doco-cd:0.128.0@sha256:f7e9d2cf21770b157fd37413236965ac93cad9b5bc05ff78efc55c3b9c6f0008
+    # Fine with the applier strategy below, which replaces the container in place.
+    container_name: doco-cd
+    restart: unless-stopped
+    dns_search: .
+    security_opt:
+      - no-new-privileges=true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          # An OOM-killed deployer stops every Deploy, so leave headroom.
+          memory: 256M
+    environment:
+      TZ: ${TZ}
+      SELF_UPDATE_ENABLED: "true"
+      # applier, not scale_out: scale_out's successor polls and deploys while the predecessor is
+      # still draining its in-flight deploys, so two deployers race and leave <id>_name containers.
+      SELF_UPDATE_STRATEGY: applier
+      # REST API (hops reaches it at doco-cd:80, hosts.yaml); no Traefik route, x-api-key required.
+      API_SECRET_FILE: /run/secrets/api_secret
+      SOPS_AGE_KEY_FILE: /run/secrets/sops_age_key
+      APPRISE_API_URL: http://apprise:8000/notify
+      APPRISE_NOTIFY_LEVEL: success
+      APPRISE_NOTIFY_URLS_FILE: /run/secrets/apprise_urls
+      # target: doco-cd reads .doco-cd.nc8kg1101.yml, so this Host deploys only nc8kg1101/.
+      POLL_CONFIG: |
+        - url: https://github.com/asotbz/ops.git
+          reference: main
+          target: nc8kg1101
+          interval: 120
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "3"
+      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: ops
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - doco-cd_data:/data
+    secrets:
+      - sops_age_key
+      - apprise_urls
+      - api_secret
+    networks:
+      - default
+      # Prometheus scrapes doco_cd_* metrics on :9120; hops reaches the API here.
+      - metrics
+    healthcheck:
+      # The image's own check, declared so validate can see it (Baseline item: healthcheck).
+      test: ["CMD", "/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+        tag: "{{.Name}}"
+
+volumes:
+  # Created by the bootstrap wizard; doco-cd's repo clones and deploy state. A self-update must never
+  # change this volume's config.
+  doco-cd_data:
+    name: ops_doco-cd_data
+    external: true
+
+secrets:
+  # The Host age key: root only (0600 in a 0700 dir), installed by the bootstrap wizard; never in the repo.
+  sops_age_key:
+    file: /etc/doco-cd/age.key
+  apprise_urls:
+    file: ./apprise_urls.sops.txt
+  api_secret:
+    file: ./api_secret.sops.txt

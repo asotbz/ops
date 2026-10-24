@@ -1,0 +1,25 @@
+# OPS STACK (deployed by doco-cd)
+# Host-wide tooling: doco-cd (deploys every Stack under nc8kg1101/, this one included), stack-back
+# (volume and database backups) and apprise (notifications). Bootstrapped once by
+# scripts/bootstrap-nc8kg1101.sh (README.md: Bootstrap); after that doco-cd deploys this Stack from main.
+
+networks:
+  # stack-back and the databases it dumps; owned here (ADR 0002).
+  backup:
+    name: backup
+    driver: bridge
+  # Prometheus and what it scrapes; owned by the monitoring Stack (ADR 0002). Created by the bootstrap
+  # wizard until monitoring moves to a compose.yaml Stack.
+  metrics:
+    name: metrics
+    external: true
+  # Transitional (asotbz/ops#304): the legacy common Stack's shared network, where xfer's Services reach
+  # apprise:8000. Dropped once xfer is cut over.
+  backend:
+    name: common_backend
+    external: true
+
+include:
+  - ./apprise/service.yaml
+  - ./doco-cd/service.yaml
+  - ./stack-back/service.yaml

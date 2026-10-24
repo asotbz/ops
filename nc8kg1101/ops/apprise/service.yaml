@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  # Relays notifications to Discord: doco-cd's deploy notices (it sends its URLs with each /notify),
+  # and xfer's Services through the saved config key asotdiscord. doco-cd does not depend on it: a
+  # failed notification never blocks a Deploy.
+  apprise:
+    # https://hub.docker.com/r/caronc/apprise
+    image: caronc/apprise:2.0.1@sha256:0b2913b15c8eb47c25345722985ffbfae701326edde21909c205d296d62dd52c
+    # xfer's Services reach it by this name on common_backend.
+    container_name: apprise
+    restart: unless-stopped
+    dns_search: .
+    # The image's apprise user; its startup script skips useradd/chown when not root, so no caps.
+    user: "1000:100"
+    security_opt:
+      - no-new-privileges=true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    environment:
+      TZ: ${TZ}
+      APPRISE_WORKER_COUNT: 1
+    # Stateful: /config holds the saved asotdiscord config. The image's other VOLUME paths are scratch,
+    # so tmpfs rather than anonymous volumes (Baseline item: anonymous-volumes).
+    volumes:
+      - apprise_config:/config
+    tmpfs:
+      - /attach:uid=1000,gid=100,mode=0700
+      - /plugin:uid=1000,gid=100,mode=0700
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "3"
+      stack-back.volumes: "true"
+      stack-back.volumes.include: "apprise_config"
+      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: ops
+    networks:
+      - default
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/status >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+        tag: "{{.Name}}"
+
+volumes:
+  # Moved from xfer_apprise_config by the bootstrap wizard (hops volume move).
+  apprise_config:
+    name: ops_apprise_config
+    external: true

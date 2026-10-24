@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  stack-back:
+    # https://github.com/lawndoc/stack-back
+    image: ghcr.io/lawndoc/stack-back:v1.5.4@sha256:adb0cf2c55223773f0e05956e74faae78c1332295559c4d625c0cb1280ee13d3
+    container_name: stack-back
+    restart: unless-stopped
+    dns_search: .
+    security_opt:
+      - no-new-privileges=true
+    cap_drop:
+      - ALL
+    # dcron (root-only binary) calls initgroups() before every job, even as root; without SETGID
+    # crontab and every job fail while crond itself, and so the healthcheck, stays up.
+    cap_add:
+      - SETGID
+    deploy:
+      resources:
+        limits:
+          # rcb alone is small (backups run in a separate runner container), but a manual
+          # rcb status/snapshots runs restic here too.
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "pgrep", "crond"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    # Restic repository, retention, schedule and Discord alerts. SWARM_MODE turns off stack-back's
+    # same-project filter, so it backs up every Stack's labelled volumes, not just ops'.
+    env_file: ../stack-back.sops.env
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "3"
+      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: ops
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - stack-back_cache:/cache
+    networks:
+      - default
+      # Joined by the databases it dumps (ADR 0002).
+      - backup
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+        tag: "{{.Name}}"
+
+volumes:
+  stack-back_cache:
+    name: ops_stack-back_cache
+    labels:
+      homeops.regenerable: "restic rebuilds its cache from the repository"

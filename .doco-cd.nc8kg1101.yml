@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://doco.cd/v0.128/schemas/deploy.schema.json
+# nc8kg1101's doco-cd reads only this file: its POLL_CONFIG sets `target: nc8kg1101`, and doco-cd
+# then looks for .doco-cd.nc8kg1101.yml at the repo root. Another Host's doco-cd sets its own target
+# and reads its own file, so no Host ever deploys another Host's folder.
+#
+# doco-cd deploys every Stack it finds at nc8kg1101/<stack>/compose.yaml; the folder name is the
+# Compose project name. The legacy nc8kg1101/<group>/docker-compose.yaml Stacks (asot, common,
+# monitoring, xfer) never match compose_files, so doco-cd never deploys them; and since delete only
+# removes projects doco-cd itself labelled, it never removes them either. A cutover that adds a
+# compose.yaml to one of those folders hands that project to doco-cd on merge.
+#
+# Removing a Stack folder removes that Stack from the Host; its volumes are kept.
+working_dir: nc8kg1101
+compose_files:
+  - compose.yaml
+env_files:
+  - .sops.env
+remove_orphans: true
+timeout: 600
+auto_discovery:
+  enabled: true
+  depth: 1
+  delete: true
+  remove_volumes: false
+  remove_images: true
