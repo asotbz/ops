@@ -45,7 +45,7 @@ scrape_configs:
     scrape_timeout: 30s
     static_configs:
       - targets: ['nzbhydra2-exporter:9811']
-        labels: {container: nzbhydra2-exporter, stack: xfer, tier: warning}
+        labels: {container: nzbhydra2-exporter, stack: xfer, tier: info}
 
   # MONITORING STACK
   - job_name: prometheus

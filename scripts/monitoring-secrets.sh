@@ -227,7 +227,12 @@ collect() {
 }
 
 # store NAME VALUE: JSON-encode VALUE and set it as the file's data, without a trailing newline.
+# An unchanged value is left alone: sops set would re-encrypt it and show a diff anyway.
 store() {
+  if [[ "$(sops -d "$DIR/$1.sops.txt")" == "$2" ]]; then
+    ok "$DIR/$1.sops.txt unchanged"
+    return
+  fi
   printf '%s' "$2" | jq -Rsc . | sops set --value-stdin "$DIR/$1.sops.txt" '["data"]'
   ok "wrote $DIR/$1.sops.txt"
 }

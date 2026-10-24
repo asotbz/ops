@@ -45,12 +45,12 @@ loki.source.docker "containers" {
 	targets          = discovery.docker.containers.targets
 	relabel_rules    = discovery.relabel.containers.rules
 	refresh_interval = "15s"
-	forward_to       = [loki.process.containers.receiver]
+	forward_to       = [loki.process.redact.receiver]
 }
 
-// Container logs can quote a URL with its key too: blackbox logs a failed Probe's target
-// (Dependency Probes can carry API keys, prometheus/dependencies.yml).
-loki.process "containers" {
+// Clients put API keys and tokens in Traefik's query strings, and blackbox logs a failed Probe's
+// target (Dependency Probes can carry API keys, prometheus/dependencies.yml): keep them out of Loki.
+loki.process "redact" {
 	stage.replace {
 		expression = "(?i)(?:api_?key|apikey|nzbkey|token|x-plex-token|access_token)=([^&\"\\s]+)"
 		replace    = "REDACTED"
@@ -70,17 +70,7 @@ loki.source.file "traefik_access" {
 		logstream = "access",
 	}]
 	tail_from_end = true
-	forward_to    = [loki.process.traefik_access.receiver]
-}
-
-loki.process "traefik_access" {
-	// Some clients put API keys and tokens in the query string; keep them out of Loki.
-	stage.replace {
-		expression = "(?i)(?:api_?key|apikey|nzbkey|token|x-plex-token|access_token)=([^&\"\\s]+)"
-		replace    = "REDACTED"
-	}
-
-	forward_to = [loki.write.local.receiver]
+	forward_to    = [loki.process.redact.receiver]
 }
 
 loki.write "local" {
