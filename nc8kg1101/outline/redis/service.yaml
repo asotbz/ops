@@ -14,7 +14,7 @@ services:
     deploy:
       resources:
         limits:
-          # No working set measured yet; it held 19 keys under Portainer.
+          # 7-day peak under Portainer: 26MiB, 19 keys (#303).
           memory: 128M
     # Snapshots so queued jobs survive a restart. No password: only Outline, on outline_default,
     # reaches it.

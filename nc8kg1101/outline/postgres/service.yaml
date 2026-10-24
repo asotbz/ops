@@ -14,8 +14,8 @@ services:
     deploy:
       resources:
         limits:
-          # No working set measured yet (Portainer ran it without a limit, shared with Authentik's
-          # database); a 14 MB database, with room for the default 128M shared_buffers.
+          # 7-day peak of the Postgres it shared with Authentik under Portainer: 328MiB (#303), for
+          # both databases; Outline's is 14MB of them, so this keeps 1.5x the whole peak.
           memory: 512M
     stop_grace_period: 60s
     healthcheck:

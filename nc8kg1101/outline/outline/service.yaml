@@ -13,8 +13,8 @@ services:
     deploy:
       resources:
         limits:
-          # No working set measured yet (Portainer ran it without a limit).
-          memory: 1536M
+          # 7-day peak under Portainer: 426MiB (#303); about 1.5x, rounded up.
+          memory: 1G
     healthcheck:
       # As the image's own HEALTHCHECK.
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/_health | grep -q OK"]

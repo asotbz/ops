@@ -21,8 +21,7 @@ x-authentik: &authentik
   deploy:
     resources:
       limits:
-        # No working set measured yet (Portainer ran it without a limit); upstream sizes the whole
-        # install at 2 GB.
+        # 7-day peak under Portainer: server 807MiB, worker 675MiB (#303); about 1.5x the larger.
         memory: 1536M
   healthcheck:
     # The image's own check; it probes the server or worker, whichever this container runs.
