@@ -17,7 +17,8 @@ services:
           # 732M working set at cutover, before the longer retention below
           memory: 2G
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null --header \"Authorization: Basic $$(printf prometheus:%s \"$$(cat /run/secrets/prometheus_password)\" | base64)\" http://127.0.0.1:9090/-/ready"]
+      # promtool reads the password from its file (promtool-http.yml), so it never reaches a process argument.
+      test: ["CMD", "promtool", "check", "ready", "--url=http://127.0.0.1:9090", "--http.config.file=/etc/prometheus/promtool-http.yml"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -60,7 +61,7 @@ services:
 
       # Probe (GLOSSARY.md): the public path a user takes; see prometheus.yml
       probe.url: https://prometheus.${DOMAIN}/-/healthy
-      probe.module: http_auth
+      probe.module: http_prometheus_auth
 
       traefik.http.services.prometheus.loadbalancer.server.port: 9090
     volumes:
@@ -73,6 +74,7 @@ services:
         x-sops: true
       - ./recording-rules.yml:/etc/prometheus/recording-rules.yml:ro
       - ./alerting-rules.yml:/etc/prometheus/alerting-rules.yml:ro
+      - ./promtool-http.yml:/etc/prometheus/promtool-http.yml:ro
 
       - prometheus_data:/prometheus
       # file_sd written by dependencies-render

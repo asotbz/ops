@@ -231,6 +231,64 @@ tests:
           - labels: 'service:uptime:ok{container="db",tier="critical",stack="app"}'
             value: 1
 
+  - name: A declared Service whose health or Probe series goes stale reads 0; a retired one drops out
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="app",service="db",name="db",tier="critical"}
+        values: 1+0x30
+      - series: homeops_container_declared{stack="app",service="web",name="web",tier="critical"}
+        values: 1+0x30
+      # Healthy, then the container is removed: the exporter stops reporting it.
+      - series: container_healthy{job="container-health",container="db",tier="critical",stack="app"}
+        values: 1+0x4 _x26
+      # Its Probe target vanishes with the container (docker_sd).
+      - series: probe_success{job="probe",instance="https://web.example/",container="web",tier="critical",stack="app"}
+        values: 1+0x4 _x26
+      # Retired: no longer declared, so it gets no Uptime once its series goes stale.
+      - series: container_healthy{job="container-health",container="old",tier="warning",stack="app"}
+        values: 1+0x4 _x26
+      - series: up{job="container-health"}
+        values: 1+0x30
+      - series: up{job="blackbox-exporter"}
+        values: 1+0x30
+    promql_expr_test:
+      - expr: service:uptime:ok
+        eval_time: 3m
+        exp_samples:
+          - labels: 'service:uptime:ok{container="db",tier="critical",stack="app"}'
+            value: 1
+          - labels: 'service:uptime:ok{container="web",tier="critical",stack="app"}'
+            value: 1
+          - labels: 'service:uptime:ok{container="old",tier="warning",stack="app"}'
+            value: 1
+      - expr: service:uptime:ok
+        eval_time: 20m
+        exp_samples:
+          - labels: 'service:uptime:ok{container="db",tier="critical",stack="app"}'
+            value: 0
+          - labels: 'service:uptime:ok{container="web",tier="critical",stack="app"}'
+            value: 0
+      # Up for minutes 0-8 (samples to 4, then the 5m lookback), down for 9-20: 9 of 21.
+      - expr: service:availability:ratio1d{container="db"} < 1
+        eval_time: 20m
+        exp_samples:
+          - labels: 'service:availability:ratio1d{container="db",tier="critical",stack="app"}'
+            value: 0.42857142857142855
+
+  - name: A blind exporter is not downtime, so stale series are not zero-filled while it is down
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="app",service="db",name="db",tier="critical"}
+        values: 1+0x30
+      - series: container_healthy{job="container-health",container="db",tier="critical",stack="app"}
+        values: 1+0x4 _x26
+      - series: up{job="container-health"}
+        values: 1+0x4 0+0x26
+    promql_expr_test:
+      - expr: service:uptime:ok
+        eval_time: 20m
+        exp_samples: []
+
   - name: Availability averages only the rolling day of Uptime
     interval: 1m
     input_series:

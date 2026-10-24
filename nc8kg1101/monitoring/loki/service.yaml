@@ -37,10 +37,11 @@ services:
 
       # Probe (GLOSSARY.md): the public path a user takes; see prometheus.yml
       probe.url: https://loki.${DOMAIN}/ready
-      probe.module: http_auth
+      probe.module: http_prometheus_auth
 
-      # grafana: a read-only datasource consumer, with its own credential.
-      traefik.http.middlewares.loki-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH},grafana:${LOKI_GRAFANA_PASSWORD_HASH}
+      # grafana: a read-only datasource consumer, with its own credential. prometheus: the Probe
+      # (blackbox.yml http_prometheus_auth), with the hash of prometheus/prometheus_password.sops.txt.
+      traefik.http.middlewares.loki-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH},grafana:${LOKI_GRAFANA_PASSWORD_HASH},prometheus:${LOKI_PROMETHEUS_PASSWORD_HASH}
       traefik.http.middlewares.loki-chain.chain.middlewares: crowdsec-bouncer,loki-auth
 
       traefik.http.services.loki.loadbalancer.server.port: 3100

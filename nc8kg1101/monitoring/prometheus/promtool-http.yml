@@ -1,0 +1,5 @@
+# promtool's HTTP client config for the healthcheck (service.yaml): the password stays in its file,
+# never in a process argument.
+basic_auth:
+  username: prometheus
+  password_file: /run/secrets/prometheus_password

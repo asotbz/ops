@@ -32,6 +32,14 @@ services:
       startup-order: "3"
     volumes:
       - ./blackbox.yml:/etc/blackbox_exporter/blackbox.yml:ro
+    # http_prometheus_auth (blackbox.yml) signs in as `prometheus` with it.
+    secrets:
+      - prometheus_password
     # Probes take the public path out through the Stack's default network.
     networks:
       - default
+
+# Prometheus's machine credential, stored encrypted in repo as <name>.sops.txt
+secrets:
+  prometheus_password:
+    file: ../prometheus/prometheus_password.sops.txt

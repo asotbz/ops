@@ -1,6 +1,6 @@
 # DEPENDENCIES (GLOSSARY.md): one Dependency Probe per edge, dependent -> Dependency, for a
 # Dependency that no Probe of an Exposed Service already covers. None yet on nc8kg1101.
-# A template: dependencies-render fills in each $PLACEHOLDER from its environment (service.yaml) and
+# A template: dependencies-render fills in each $$NAME placeholder from its environment (service.yaml) and
 # writes the file Prometheus reads as file_sd (job `dependency` in prometheus.yml). A new placeholder
 # must also be added to that environment (homelab-validate env checks it); write a literal dollar sign
 # as two. Each entry probes the exact URL the dependent uses:
