@@ -25,7 +25,7 @@ There is one Stack per app, each with its own Datastores ([ADR 0004](docs/adr/00
 
 | Platform Stack | Services |
 |---|---|
-| `edge` | Traefik, CrowdSec, nginx, mitmproxy |
+| `edge` | Traefik, CrowdSec, nginx, mitmproxy (with its openresty sidecar) |
 | `monitoring` | Prometheus, Alertmanager, Loki and their collectors and exporters |
 | `ops` | doco-cd, stack-back (Backups), Apprise |
 
@@ -41,7 +41,7 @@ nc8kg1101 still runs four umbrella groups (`common`, `monitoring`, `asot`, `xfer
 4. asot into authentik and outline ([#303](https://github.com/asotbz/ops/issues/303))
 5. xfer into one Stack per app ([#304](https://github.com/asotbz/ops/issues/304))
 
-#300 moved stack-back out of `common` and Apprise out of `xfer` into `nc8kg1101/ops`; the rest of both groups stays until their own cutover. Each cutover applies the Baseline, the role-based networks and the volume naming rule, and removes the group from Portainer. The Portainer agent is then removed from the Host ([#305](https://github.com/asotbz/ops/issues/305)).
+#300 moved stack-back out of `common` and Apprise out of `xfer` into `nc8kg1101/ops`. #301 moved Traefik, CrowdSec and nginx out of `common` and mitmproxy and openresty out of `xfer` into `nc8kg1101/edge`, which owns the `proxy` and `forward-proxy` networks ([ADR 0002](docs/adr/0002-role-based-networks-replace-whalewall.md)). Every Service Traefik routes to joins `proxy` whichever group it is in, and prowlarr and nzbhydra2 reach mitmproxy on `forward-proxy`; the groups keep `common_backend` among themselves until their own cutover. `common` now holds only the Portainer agent. Its container was started by hand, and nothing redeploys `common` any more. Each cutover applies the Baseline, the role-based networks and the volume naming rule, and removes the group from Portainer. The Portainer agent is then removed from the Host ([#305](https://github.com/asotbz/ops/issues/305)).
 
 ## How a Deploy works
 
@@ -143,7 +143,7 @@ and its value per line, which CI passes too:
   The check fails once the group has a `compose.yaml` or is gone, so each cutover PR removes its line. The list
   only shrinks.
 - `--path NAME=PATH` for each component `homelab-validate` reads, so a missing one fails instead of being skipped.
-  None exists yet; the edge and monitoring cutovers add theirs.
+  edge added `traefik`; the monitoring cutover adds its own.
 
 `declared_containers.prom` is generated from the Stacks and committed; regenerate it whenever a Stack's Services
 change. Prometheus reads it through node-exporter's textfile collector from the monitoring cutover

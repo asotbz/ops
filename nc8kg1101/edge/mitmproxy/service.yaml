@@ -1,0 +1,147 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  # Forward proxy for xfer's indexer managers (prowlarr, nzbhydra2), which trust its CA. Its addon
+  # rewrites every URL in an XML response to point at openresty, so clients fetch through orx.
+  mitmproxy:
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    # https://hub.docker.com/r/mitmproxy/mitmproxy
+    image: mitmproxy/mitmproxy:12.2.3@sha256:00b77b5d8804c8ad18cb6caefbf9d5849e895e8986c5ce011f4ae30f4385962f
+    container_name: mitmproxy
+    # The image's mitmproxy user, which owns the data volume. Its entrypoint would usermod and gosu
+    # to that user, which needs root and capabilities, so start mitmweb directly instead.
+    user: "1000:1000"
+    entrypoint: ["mitmweb"]
+    command: --web-host 0.0.0.0 --set web_password=${MITMPROXY_WEB_PASSWORD} -s /addons/rewrite_xml.py
+    deploy:
+      resources:
+        limits:
+          # 2.4G working set at cutover: mitmweb keeps every flow in memory, so it grows until a
+          # restart. The limit restarts it before it takes the Host.
+          memory: 4G
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; [socket.create_connection(('127.0.0.1', p), 3) for p in (8080, 8081)]"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    environment:
+      - HOME=/home/mitmproxy
+      - ORX_PSK=${ORX_PSK}
+      - ORX_BASE=${ORX_BASE}
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "0"
+      stack-back.volumes: true
+      stack-back.volumes.include: "mitmproxy_data"
+      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: edge
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.mitmproxy-http.rule: Host(`mmp.${DOMAIN}`)
+      traefik.http.routers.mitmproxy-http.entrypoints: http
+      traefik.http.routers.mitmproxy-http.middlewares: redirect-https
+
+      # Direct all https requests to the service
+      traefik.http.routers.mitmproxy-https.rule: Host(`mmp.${DOMAIN}`)
+      traefik.http.routers.mitmproxy-https.entrypoints: https
+      traefik.http.routers.mitmproxy-https.tls: true
+      traefik.http.routers.mitmproxy-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.mitmproxy-https.service: mitmproxy
+      traefik.http.routers.mitmproxy-https.middlewares: crowdsec-bouncer
+
+      # Probe (GLOSSARY.md): the public path a user takes. Unused until monitoring is cut over.
+      probe.url: https://mmp.${DOMAIN}/
+
+      traefik.http.services.mitmproxy.loadbalancer.server.port: 8081
+    volumes:
+      # Its CA, which prowlarr and nzbhydra2 trust: losing it breaks both until they trust a new one.
+      - mitmproxy_data:/home/mitmproxy/.mitmproxy
+      - ./addons:/addons:ro
+    networks:
+      - default
+      # Web UI (:8081) through Traefik
+      - proxy
+      # The proxy port (:8080) for its clients
+      - forward-proxy
+
+  # Fetches the URLs mitmproxy rewrote (/proxy/<psk>/<base64url>) on the client's behalf.
+  openresty:
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    # https://hub.docker.com/r/openresty/openresty
+    image: openresty/openresty:1.29.2.3-4-bullseye@sha256:3aa2b3eb634ea01b2ac7518af1d2c0799b46ab9c39eb6712f2b2afa99e7f0d11
+    container_name: openresty
+    # nobody: as root, nginx would need SETUID/SETGID to drop its workers' privileges.
+    user: "65534:65534"
+    # nginx.conf comes from a directory mount (see nginx/service.yaml) and keeps temp files and its
+    # pid under the tmpfs at /var/run/openresty.
+    command: ["/usr/bin/openresty", "-c", "/etc/orx/nginx.conf", "-g", "daemon off;"]
+    deploy:
+      resources:
+        limits:
+          # 27M working set at cutover
+          memory: 128M
+    healthcheck:
+      # The image has neither curl nor wget; / answers 403 by design, so check the port is open.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 5s
+    environment:
+      - ORX_PSK=${ORX_PSK}
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "0"
+      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: edge
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.openresty-http.rule: Host(`orx.${DOMAIN}`)
+      traefik.http.routers.openresty-http.entrypoints: http
+      traefik.http.routers.openresty-http.middlewares: redirect-https
+
+      # Direct all https requests to the service
+      traefik.http.routers.openresty-https.rule: Host(`orx.${DOMAIN}`)
+      traefik.http.routers.openresty-https.entrypoints: https
+      traefik.http.routers.openresty-https.tls: true
+      traefik.http.routers.openresty-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.openresty-https.service: openresty
+      traefik.http.routers.openresty-https.middlewares: crowdsec-bouncer
+
+      # Probe (GLOSSARY.md): the public path a user takes. Unused until monitoring is cut over.
+      probe.url: https://orx.${DOMAIN}/
+
+      traefik.http.services.openresty.loadbalancer.server.port: 8080
+    volumes:
+      - ./openresty:/etc/orx:ro
+    tmpfs:
+      - /var/run/openresty:uid=65534,gid=65534,mode=0700
+    networks:
+      - default
+      - proxy
+
+volumes:
+  # Moved from xfer_mitmproxy_data at the cutover (asotbz/ops#301, ADR 0009).
+  mitmproxy_data:
+    name: edge_mitmproxy_data
+    external: true

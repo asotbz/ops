@@ -59,3 +59,5 @@ services:
         tag: "{{.Name}}"
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002), for fuzzbin in its network namespace
+      - proxy

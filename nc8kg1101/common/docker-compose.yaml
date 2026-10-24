@@ -1,3 +1,7 @@
+# COMMON (legacy group; started by hand with `docker compose`, not by Portainer or doco-cd)
+# Only the Portainer agent is left: Traefik, CrowdSec and nginx moved to the edge Stack (asotbz/ops#301)
+# and the agent goes with asotbz/ops#305. The backend network (common_backend) stays until the last
+# legacy Stack using it is cut over (ADR 0002).
 networks:
   backend:
     driver: bridge
@@ -6,7 +10,4 @@ networks:
         - subnet: ${COMMON_BACKEND_SUBNET_V4}
 
 include:
-  - ./crowdsec/docker-compose.yaml
-  - ./nginx/docker-compose.yaml
   - ./portainer/docker-compose.yaml
-  - ./traefik/docker-compose.yaml

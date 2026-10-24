@@ -79,6 +79,10 @@ services:
       - prometheus_data:/prometheus
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+      # Scrapes edge's traefik and crowdsec (ADR 0002)
+      - metrics
 
 volumes:
   prometheus_data:

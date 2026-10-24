@@ -65,6 +65,8 @@ services:
       - outline_data:/var/lib/outline/data
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
 
 volumes:
   outline_data:

@@ -6,6 +6,14 @@ networks:
   backend:
     name: common_backend
     external: true
+  # Traefik and the Services it routes to; owned by the edge Stack (ADR 0002)
+  proxy:
+    name: proxy
+    external: true
+  # mitmproxy and the Services that send requests through it; owned by the edge Stack (ADR 0002)
+  forward-proxy:
+    name: forward-proxy
+    external: true
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
@@ -13,7 +21,6 @@ include:
   - ./ersatztv/docker-compose.yaml
   - ./fuzzbin/docker-compose.yaml
   - ./gluetun/docker-compose.yaml
-  - ./mitmproxy/docker-compose.yaml
   - ./nzbhydra2/docker-compose.yaml
   - ./nzbhydra2-exporter/docker-compose.yaml
   - ./prowlarr/docker-compose.yaml

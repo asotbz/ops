@@ -13,3 +13,4 @@
 --legacy-stack monitoring
 --legacy-stack asot
 --legacy-stack xfer
+--path traefik=nc8kg1101/edge/traefik/service.yaml

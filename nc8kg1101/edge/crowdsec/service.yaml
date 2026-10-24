@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  crowdsec:
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    # https://hub.docker.com/r/crowdsecurity/crowdsec
+    image: crowdsecurity/crowdsec:v1.7.8@sha256:2f527c9bb8b367120eb08b82890aa912ce96bfa1ada93dda0721700e4b4e0dde
+    container_name: crowdsec
+    user: ${COMMON_UID}:${COMMON_GID}
+    deploy:
+      resources:
+        limits:
+          # 127M working set at cutover
+          memory: 384M
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    environment:
+      # https://hub.docker.com/r/crowdsecurity/crowdsec
+      - TZ=${TZ}
+      # https://app.crowdsec.net/hub/collections
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/http-cve
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "0"
+      stack-back.volumes: true
+      stack-back.volumes.include: "crowdsec_data,crowdsec_config"
+      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
+      logging: promtail
+      logging_jobname: containerlogs
+      stackname: edge
+    volumes:
+      - crowdsec_log:/var/log/crowdsec
+      - crowdsec_data:/var/lib/crowdsec/data
+      - crowdsec_config:/etc/crowdsec
+      # Allow Crowdsec to read and parse Traefik access logs
+      - traefik_log:/var/log/traefik:ro
+    networks:
+      # Traefik's bouncer reaches the LAPI (:8080) and AppSec (:7422) here
+      - default
+      # Prometheus scrapes crowdsec:6060
+      - metrics
+
+volumes:
+  crowdsec_log:
+    name: edge_crowdsec_log
+    labels:
+      homeops.regenerable: "crowdsec logs to stdout (log_media: stdout); nothing is kept here"
+  # Moved from common_crowdsec_* at the cutover (asotbz/ops#301, ADR 0009). data holds the LAPI
+  # database, with Traefik's bouncer registration; config holds acquis.yaml and the hub.
+  crowdsec_config:
+    name: edge_crowdsec_config
+    external: true
+  crowdsec_data:
+    name: edge_crowdsec_data
+    external: true
