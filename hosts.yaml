@@ -1,5 +1,4 @@
 # Hosts the shared Repo Tooling manages (docs/adr/0012-shared-repo-tooling.md).
-# nc4kg1201 is deliberately not declared, so the tooling leaves it alone.
 version: 1
 default_branch: main
 hosts:
