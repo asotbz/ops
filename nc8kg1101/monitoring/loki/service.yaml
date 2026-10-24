@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  loki:
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193
+    container_name: loki
+    # The image's user (10001); Docker copies the image's /loki, owned by it, onto the empty volume.
+    deploy:
+      resources:
+        limits:
+          # 137M working set at cutover, with no retention yet (it kept logs in /tmp)
+          memory: 768M
+    command: -config.file=/etc/loki/loki.yaml
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "1"
+      baseline.exempt.healthcheck: "distroless image: no shell, wget or curl to run a healthcheck with"
+
+      # A remote Grafana reads it as a datasource (ADR 0011), through Traefik with basic auth.
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.loki-http.rule: Host(`loki.${DOMAIN}`)
+      traefik.http.routers.loki-http.entrypoints: http
+      traefik.http.routers.loki-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.loki-https.rule: Host(`loki.${DOMAIN}`)
+      traefik.http.routers.loki-https.entrypoints: https
+      traefik.http.routers.loki-https.tls: true
+      traefik.http.routers.loki-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.loki-https.service: loki
+      traefik.http.routers.loki-https.middlewares: loki-chain
+
+      # Probe (GLOSSARY.md): the public path a user takes; see prometheus.yml
+      probe.url: https://loki.${DOMAIN}/ready
+      probe.module: http_prometheus_auth
+
+      # grafana: a read-only datasource consumer, with its own credential. prometheus: the Probe
+      # (blackbox.yml http_prometheus_auth), with the hash of prometheus/prometheus_password.sops.txt.
+      traefik.http.middlewares.loki-auth.basicauth.users: ${LOKI_USER}:${LOKI_PASSWORD_HASH},grafana:${LOKI_GRAFANA_PASSWORD_HASH},prometheus:${LOKI_PROMETHEUS_PASSWORD_HASH}
+      traefik.http.middlewares.loki-chain.chain.middlewares: crowdsec-bouncer,loki-auth
+
+      traefik.http.services.loki.loadbalancer.server.port: 3100
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml:ro
+      - loki_data:/loki
+    networks:
+      # Alloy pushes and hops queries here (loki:3100 on monitoring_default)
+      - default
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+
+volumes:
+  # Logs are not backed up (no stack-back label); 14d retention. Compose creates it empty at the cutover.
+  loki_data:
+    name: monitoring_loki_data
+    labels:
+      homeops.regenerable: "Loki's last 14 days of logs, not backed up; losing them loses history, not function"

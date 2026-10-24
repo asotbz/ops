@@ -1,0 +1,285 @@
+rule_files:
+  - /etc/prometheus/recording-rules.yml
+  - /etc/prometheus/alerting-rules.yml
+evaluation_interval: 1m
+# Alerts read recording rules from other groups; evaluate those first so timings are deterministic.
+group_eval_order: [prometheus_node_exporter_rules, traefik_services, availability]
+tests:
+  - name: TargetDown preserves the Service Tier and Stack and excludes Probe scrape failures
+    interval: 1m
+    input_series:
+      - series: up{job="traefik",tier="critical",stack="edge"}
+        values: 0+0x5 1+0x2
+      - series: up{job="probe",tier="critical",stack="edge"}
+        values: 0+0x8
+      - series: up{job="dependency",tier="warning",stack="external"}
+        values: 0+0x8
+    promql_expr_test:
+      - expr: &target sum by (alertname, tier, stack, job) (ALERTS{alertname="TargetDown",alertstate="firing"})
+        eval_time: 4m
+        exp_samples: []
+      - expr: *target
+        eval_time: 5m
+        exp_samples:
+          - labels: '{alertname="TargetDown",tier="critical",stack="edge",job="traefik"}'
+            value: 1
+      - expr: *target
+        eval_time: 6m
+        exp_samples: []
+
+  - name: ProbeFailed carries the probed Service's routing and inhibition labels
+    interval: 1m
+    input_series:
+      - series: probe_success{job="probe",container="outline",tier="critical",stack="asot"}
+        values: 0+0x3 1+0x2
+      - series: probe_success{job="probe",container="loki",tier="warning",stack="monitoring"}
+        values: 0+0x3 1+0x2
+      - series: probe_success{job="internet",tier="warning",stack="monitoring"}
+        values: 0+0x6
+    promql_expr_test:
+      - expr: &probe sum by (alertname, tier, stack, container, job) (ALERTS{alertname="ProbeFailed",alertstate="firing"})
+        eval_time: 2m
+        exp_samples: []
+      - expr: *probe
+        eval_time: 3m
+        exp_samples:
+          - labels: '{alertname="ProbeFailed",tier="critical",stack="asot",container="outline",job="probe"}'
+            value: 1
+          - labels: '{alertname="ProbeFailed",tier="warning",stack="monitoring",container="loki",job="probe"}'
+            value: 1
+      - expr: *probe
+        eval_time: 4m
+        exp_samples: []
+
+  # ContainerDown: a container nc8kg1101/ declares (homeops_container_declared, homelab-declared-containers)
+  # that cAdvisor has not seen for 2 minutes, for 5 minutes.
+  - name: ContainerDown fires for a declared container that stopped and clears when it returns
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{job="node-exporter",instance="node-exporter:9100",stack="edge",service="traefik",name="traefik",tier="critical"}
+        values: 1x15
+      # cAdvisor series carry its own scrape target labels (stack="monitoring"); the rule replaces them.
+      - series: container_last_seen{job="cadvisor",container="cadvisor",stack="monitoring",tier="warning",name="traefik",container_label_tier="critical",container_label_com_docker_compose_project="edge",container_label_com_docker_compose_service="traefik"}
+        values: 0+60x2 stale _x7 660+60x3
+      - series: up{job="cadvisor",stack="monitoring",tier="warning"}
+        values: 1x15
+    promql_expr_test:
+      - expr: &container sum by (alertname, tier, stack, name) (ALERTS{alertname="ContainerDown",alertstate="firing"})
+        eval_time: 8m
+        exp_samples: []
+      - expr: *container
+        eval_time: 9m
+        exp_samples:
+          - labels: '{alertname="ContainerDown",tier="critical",stack="edge",name="traefik"}'
+            value: 1
+      - expr: *container
+        eval_time: 11m
+        exp_samples: []
+
+  - name: ContainerDown fires for a declared container that was never created, but waits out a slow first Deploy
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="ops",service="stack-back",name="stack-back",tier="critical"}
+        values: 1x10
+      - series: homeops_container_declared{stack="monitoring",service="loki",name="loki",tier="warning"}
+        values: 1x10
+      - series: container_last_seen{name="loki",container_label_tier="warning",container_label_com_docker_compose_project="monitoring",container_label_com_docker_compose_service="loki"}
+        values: _x4 240+60x6
+    promql_expr_test:
+      - expr: *container
+        eval_time: 4m
+        exp_samples: []
+      - expr: *container
+        eval_time: 5m
+        exp_samples:
+          - labels: '{alertname="ContainerDown",tier="critical",stack="ops",name="stack-back"}'
+            value: 1
+
+  # Without container_name, `name` is Compose's guess (<stack>-<service>-1); doco-cd's self-updates
+  # bump the number. The text names the Stack and Service, which match the real container.
+  - name: ContainerDown describes the Service, not the guessed container name
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="doco-cd",service="doco-cd",name="doco-cd-doco-cd-1",tier="warning"}
+        values: 1x10
+    alert_rule_test:
+      - alertname: ContainerDown
+        eval_time: 5m
+        exp_alerts:
+          - exp_labels: {stack: doco-cd, service: doco-cd, name: doco-cd-doco-cd-1, tier: warning}
+            exp_annotations:
+              summary: doco-cd/doco-cd is not running
+              description: "Service doco-cd of Stack doco-cd is declared in nc8kg1101/, but no container of it has been seen running for 7 minutes."
+
+  - name: ContainerDown uses any container of the Service across a recreate
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="app",service="web",name="web",tier="critical"}
+        values: 1x8
+      - series: container_last_seen{name="old",container_label_tier="critical",container_label_com_docker_compose_project="app",container_label_com_docker_compose_service="web"}
+        values: 0 stale
+      - series: container_last_seen{name="new",container_label_tier="critical",container_label_com_docker_compose_project="app",container_label_com_docker_compose_service="web"}
+        values: _ _ 120+60x6
+    promql_expr_test:
+      - expr: *container
+        eval_time: 8m
+        exp_samples: []
+
+  # A Stack retired or renamed, or a Service removed from a Stack, in git. The declared file lags
+  # the removal by 2 minutes (monitoring deploys after the Stack is removed).
+  # Neither the doco-cd self-applier nor an ad-hoc startup-order=skip container is declared.
+  - name: ContainerDown ignores Stacks and Services removed from git and one-shot helpers
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="common",service="nzbhydra2",name="nzbhydra2",tier="warning"}
+        values: 1x4 stale
+      - series: container_last_seen{name="nzbhydra2",container_label_tier="warning",container_label_com_docker_compose_project="common",container_label_com_docker_compose_service="nzbhydra2"}
+        values: 0+60x2 stale
+      - series: homeops_container_declared{stack="xfer",service="nzbhydra2",name="nzbhydra2",tier="warning"}
+        values: _x3 1x12
+      - series: container_last_seen{name="nzbhydra2",container_label_tier="warning",container_label_com_docker_compose_project="xfer",container_label_com_docker_compose_service="nzbhydra2"}
+        values: _x3 180+60x12
+      - series: homeops_container_declared{stack="edge",service="whoami",name="whoami",tier="warning"}
+        values: 1x4 stale
+      - series: container_last_seen{name="whoami",container_label_tier="warning",container_label_com_docker_compose_project="edge",container_label_com_docker_compose_service="whoami"}
+        values: 0+60x2 stale
+      - series: homeops_container_declared{stack="edge",service="nginx",name="nginx",tier="warning"}
+        values: 1x15
+      - series: container_last_seen{name="nginx",container_label_tier="warning",container_label_com_docker_compose_project="edge",container_label_com_docker_compose_service="nginx"}
+        values: 0+60x15
+      - series: container_last_seen{name="doco-cd-doco-cd-6-self-applier-1792000000",container_label_tier="warning"}
+        values: 0+60x1 stale
+      - series: container_last_seen{name="adhoc-spike",container_label_tier="warning",container_label_startup_order="skip"}
+        values: 0+60x1 stale
+    promql_expr_test:
+      - expr: *container
+        eval_time: 4m
+        exp_samples: []
+      - expr: *container
+        eval_time: 15m
+        exp_samples: []
+
+  # cAdvisor down hides every container; TargetDown reports it once instead.
+  - name: ContainerDown holds while cAdvisor is down
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="edge",service="traefik",name="traefik",tier="critical"}
+        values: 1x10
+      - series: up{job="cadvisor",stack="monitoring",tier="warning"}
+        values: 0x10
+    promql_expr_test:
+      - expr: *container
+        eval_time: 10m
+        exp_samples: []
+
+  - name: ContainerRestarting needs more than two changes and retains the Critical Tier
+    interval: 1m
+    input_series:
+      - series: container_start_time_seconds{name="outline",container_label_tier="critical",container_label_com_docker_compose_project="asot"}
+        values: 0 60 120 180+0x20
+      - series: container_start_time_seconds{name="exporter",container_label_tier="info",container_label_com_docker_compose_project="monitoring"}
+        values: 0+60x23
+      # No Compose project (doco-cd's self-applier inherits doco-cd's tier): no Stack to report.
+      - series: container_start_time_seconds{name="doco-cd-doco-cd-6-self-applier-1792000000",container_label_tier="warning"}
+        values: 0+60x23
+    promql_expr_test:
+      - expr: &restarting sum by (alertname, tier, stack, name) (ALERTS{alertname="ContainerRestarting",alertstate="firing"})
+        eval_time: 2m
+        exp_samples: []
+      - expr: *restarting
+        eval_time: 3m
+        exp_samples:
+          - labels: '{alertname="ContainerRestarting",tier="critical",stack="asot",name="outline"}'
+            value: 1
+      - expr: *restarting
+        eval_time: 17m
+        exp_samples: []
+
+  - name: ContainerOOMKilled reacts to an event and clears when it leaves the window
+    interval: 1m
+    input_series:
+      - series: container_oom_events_total{name="outline",container_label_tier="critical",container_label_com_docker_compose_project="asot"}
+        values: 0 1+0x20
+      - series: container_oom_events_total{name="exporter",container_label_tier="info",container_label_com_docker_compose_project="monitoring"}
+        values: 0 1+0x20
+      - series: container_oom_events_total{name="doco-cd-doco-cd-6-self-applier-1792000000",container_label_tier="warning"}
+        values: 0 1+0x20
+    promql_expr_test:
+      - expr: &oom sum by (alertname, tier, stack, name) (ALERTS{alertname="ContainerOOMKilled",alertstate="firing"})
+        eval_time: 0m
+        exp_samples: []
+      - expr: *oom
+        eval_time: 1m
+        exp_samples:
+          - labels: '{alertname="ContainerOOMKilled",tier="critical",stack="asot",name="outline"}'
+            value: 1
+      - expr: *oom
+        eval_time: 16m
+        exp_samples: []
+
+  # Available space under 20% and the 6h trend reaching zero within 4 hours, for an hour.
+  - name: HostFilesystemFillingUp needs a sustained fill-up trend and ignores read-only and non-XFS filesystems
+    interval: 1m
+    input_series:
+      # 1000 GiB XFS root falling 1 GiB a minute from 150 GiB free: 15% free, empty within 3 hours.
+      - series: node_filesystem_avail_bytes{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 161061273600-1073741824x80
+      - series: node_filesystem_size_bytes{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 1073741824000x80
+      - series: node_filesystem_readonly{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 0x80
+      # Read-only, and not XFS: never.
+      - series: node_filesystem_avail_bytes{job="node-exporter",mountpoint="/boot/efi",fstype="vfat"}
+        values: 1000-10x80
+      - series: node_filesystem_size_bytes{job="node-exporter",mountpoint="/boot/efi",fstype="vfat"}
+        values: 100000x80
+      - series: node_filesystem_readonly{job="node-exporter",mountpoint="/boot/efi",fstype="vfat"}
+        values: 0x80
+      - series: node_filesystem_avail_bytes{job="node-exporter",mountpoint="/mnt/ro",fstype="xfs"}
+        values: 1000-10x80
+      - series: node_filesystem_size_bytes{job="node-exporter",mountpoint="/mnt/ro",fstype="xfs"}
+        values: 100000x80
+      - series: node_filesystem_readonly{job="node-exporter",mountpoint="/mnt/ro",fstype="xfs"}
+        values: 1x80
+    promql_expr_test:
+      - expr: &filling sum by (alertname, tier, stack, mountpoint) (ALERTS{alertname="HostFilesystemFillingUp",alertstate="firing"})
+        eval_time: 59m
+        exp_samples: []
+      - expr: *filling
+        eval_time: 61m
+        exp_samples:
+          - labels: '{alertname="HostFilesystemFillingUp",tier="critical",stack="host",mountpoint="/"}'
+            value: 1
+
+  - name: HostFilesystemFillingUp ignores a full but steady filesystem
+    interval: 1m
+    input_series:
+      - series: node_filesystem_avail_bytes{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 53687091200x80
+      - series: node_filesystem_size_bytes{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 1073741824000x80
+      - series: node_filesystem_readonly{job="node-exporter",mountpoint="/",fstype="xfs"}
+        values: 0x80
+    promql_expr_test:
+      - expr: *filling
+        eval_time: 80m
+        exp_samples: []
+
+  # doco-cd is Critical, and without polls nothing merged reaches the Host.
+  - name: DeployPollFailing needs three failed polls in 15 minutes and pages for the ops Stack
+    interval: 1m
+    input_series:
+      - series: doco_cd_poll_errors_total{job="doco-cd",stack="ops",tier="critical"}
+        values: 0 1 2 3+0x20
+    promql_expr_test:
+      - expr: &poll sum by (alertname, tier, stack) (ALERTS{alertname="DeployPollFailing",alertstate="firing"})
+        eval_time: 2m
+        exp_samples: []
+      - expr: *poll
+        eval_time: 3m
+        exp_samples:
+          - labels: '{alertname="DeployPollFailing",tier="critical",stack="ops"}'
+            value: 1
+      - expr: *poll
+        eval_time: 19m
+        exp_samples: []

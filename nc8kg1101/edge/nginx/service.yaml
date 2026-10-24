@@ -24,10 +24,6 @@ services:
       # Alert Tier (GLOSSARY.md): critical | warning | info
       tier: critical
       startup-order: "0"
-      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: edge
 
       traefik.enable: true
 
@@ -47,7 +43,7 @@ services:
       traefik.http.routers.nginx-https.service: nginx
       traefik.http.routers.nginx-https.middlewares: catch-all
 
-      # Probe (GLOSSARY.md): the public path a user takes. Unused until monitoring is cut over.
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
       probe.url: https://${DOMAIN}/
 
       traefik.http.services.nginx.loadbalancer.server.port: 80

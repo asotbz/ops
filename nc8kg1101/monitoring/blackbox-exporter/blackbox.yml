@@ -1,0 +1,40 @@
+# Modules a Service picks with its `probe.module` label (default http_2xx), and that a
+# Dependency Probe names in `module` (prometheus/dependencies.yml).
+modules:
+  http_2xx:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: []  # 2xx
+
+  # Edge reachability only: a 401 shows the router and its basic-auth middleware answer, not that
+  # anything behind them is up. Only traefik uses it, where that middleware is the probed Service.
+  http_auth:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: [401]
+
+  # Through the basic-auth wall to the Service itself, as the machine user `prometheus` (a Compose
+  # secret, service.yaml): a 2xx means the Service answered. Prometheus's web.yml and Loki's Traefik
+  # middleware both accept that user.
+  http_prometheus_auth:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: []  # 2xx
+      basic_auth:
+        username: prometheus
+        password_file: /run/secrets/prometheus_password
+
+  # Denies anonymous requests by design (mitmproxy's web UI, openresty's `location /`): a 403 from
+  # the Service itself means it is up; Traefik answers 502 or 404 when it is not.
+  http_403:
+    prober: http
+    timeout: 8s
+    http:
+      valid_status_codes: [403]
+
+  tcp_connect:
+    prober: tcp
+    timeout: 8s

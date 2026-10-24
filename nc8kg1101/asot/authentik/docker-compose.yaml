@@ -15,13 +15,10 @@ services:
       - authentik_media:/media
       - authentik_templates:/templates
     labels:
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: critical
       stack-back.volumes: true
       stack-back.volumes.include: "authentik_media,authentik_certs,authentik_templates"
-      
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot
 
       traefik.enable: true
 
@@ -39,6 +36,9 @@ services:
       traefik.http.routers.idp-https.middlewares: crowdsec-bouncer
 
       traefik.http.services.idp.loadbalancer.server.port: 9000
+
+      # Probe: the public path a user takes (monitoring/prometheus/prometheus.yml)
+      probe.url: https://idp.${DOMAIN}/-/health/live/
 
       # network policy
       whalewall.enabled: true
@@ -92,11 +92,8 @@ services:
       AUTHENTIK_REDIS__HOST: redis
       AUTHENTIK_POSTGRESQL__HOST: postgresql
     labels:
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: asot
-
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: critical
       # network policy
       whalewall.enabled: true
       whalewall.rules: |

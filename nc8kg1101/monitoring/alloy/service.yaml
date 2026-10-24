@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  alloy:
+    # https://github.com/grafana/alloy
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    container_name: alloy
+    # The image's user, which owns its /var/lib/alloy/data (0770); Docker copies that onto the empty
+    # volume. Its group reads Traefik's access log, which edge's Traefik writes as COMMON_GID.
+    user: "473:${EDGE_GID}"
+    deploy:
+      resources:
+        limits:
+          # Replaces promtail, at 77M working set
+          memory: 384M
+    # Reads container logs through the Docker API
+    group_add:
+      - ${DOCKER_GID}
+    depends_on:
+      loki:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/12345 && printf 'GET /-/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q ' 200 ' <&3"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "3"
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      # Read positions, so a restart neither re-ships nor skips logs.
+      - alloy_data:/var/lib/alloy/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_log:/var/log/traefik:ro
+    networks:
+      - default
+
+volumes:
+  alloy_data:
+    name: monitoring_alloy_data
+    labels:
+      homeops.regenerable: "Alloy's read positions; without them it re-reads the logs Docker still holds"
+  # Owned by the edge Stack
+  traefik_log:
+    name: edge_traefik_log
+    external: true

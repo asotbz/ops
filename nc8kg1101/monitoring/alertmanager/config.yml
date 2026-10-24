@@ -1,29 +1,58 @@
-# Alertmanager for nc8kg1101's own Prometheus and Loki ruler; independent of any other host.
-#   Watchdog           -> healthchecks.io heartbeat; silence means the alert pipeline is broken
-#   severity/tier info -> never notifies
-#   everything else    -> Discord (the channel nzbhydra2 notifies today)
-# The entrypoint writes the URLs from .sops.env into /run/alertmanager before starting.
+# Routing by Tier (GLOSSARY.md), for nc8kg1101's own Prometheus (ADR 0011):
+#   critical -> the Page (Pushover), and also the Digest (Discord) for the record
+#   warning  -> the Digest, grouped per Stack, repeated every 12h
+#   info     -> never notifies
+#   Watchdog -> the Heartbeat (healthchecks.io); silence there means the alert pipeline is broken
+# An alert without a tier label falls through to the Digest so it can't go unseen.
+# Credentials are SOPS-encrypted in the repo (<name>.sops.txt) and mounted as Compose secrets;
+# scripts/monitoring-secrets.sh writes them.
 global:
   resolve_timeout: 5m
 
 route:
   receiver: discord
-  group_by: [alertname]
+  group_by: [stack]
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 12h
   routes:
     - matchers: [alertname="Watchdog"]
       receiver: heartbeat
+      group_by: [alertname]
       group_wait: 0s
       group_interval: 1m
       repeat_interval: 1m
-    - matchers: [severity="info"]
-      receiver: blackhole
     - matchers: [tier="info"]
       receiver: blackhole
+    - matchers: [tier="critical"]
+      receiver: pushover
+      group_by: [stack, alertname]
+      group_wait: 10s
+      repeat_interval: 4h
+      continue: true
+    - matchers: [tier=~"critical|warning"]
+      receiver: discord
 
 inhibit_rules:
+  # With the Internet or Traefik down every Probe fails; report the cause, not each Service.
+  - source_matchers: [alertname="InternetDown"]
+    target_matchers: [alertname="ProbeFailed"]
+  - source_matchers: [alertname="ProbeFailed", container="traefik"]
+    target_matchers: [alertname="ProbeFailed", container!="traefik"]
+  - source_matchers: [alertname="ProbeFailed"]
+    target_matchers: [alertname="Http5xxRatio"]
+    equal: [container]
+  # A stopped or unreachable Service: report that, not its failing health check.
+  - source_matchers: [alertname="ContainerDown"]
+    target_matchers: [alertname="ContainerUnhealthy"]
+    equal: [name]
+  - source_matchers: [alertname="ProbeFailed"]
+    target_matchers: [alertname="ContainerUnhealthy"]
+    equal: [container]
+  - source_matchers: [alertname="ContainerDown"]
+    target_matchers: [alertname="ContainerHealthExporterBlind"]
+    equal: [name]
+  # nzbhydra2's stats unavailable: its per-indexer alerts are stale.
   - source_matchers: [alertname="NzbhydraStatsDown"]
     target_matchers: [alertname=~"NzbhydraIndexer.+"]
 
@@ -32,10 +61,17 @@ receivers:
 
   - name: heartbeat
     webhook_configs:
-      - url_file: /run/alertmanager/watchdog_url
+      - url_file: /run/secrets/watchdog_url
         send_resolved: false
+
+  - name: pushover
+    pushover_configs:
+      - user_key_file: /run/secrets/pushover_user_key
+        token_file: /run/secrets/pushover_token
+        priority: '{{ if eq .Status "firing" }}1{{ else }}0{{ end }}'
+        send_resolved: true
 
   - name: discord
     discord_configs:
-      - webhook_url_file: /run/alertmanager/discord_webhook
+      - webhook_url_file: /run/secrets/discord_webhook
         send_resolved: true

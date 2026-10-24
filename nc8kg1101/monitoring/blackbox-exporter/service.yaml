@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  # Probes (GLOSSARY.md): outside-in checks of each Exposed Service, the way a user reaches it.
+  # Targets come from `probe.url` labels via Prometheus docker_sd (prometheus.yml),
+  # and Dependency Probes from prometheus/dependencies.yml.
+  blackbox-exporter:
+    # https://github.com/prometheus/blackbox_exporter
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: prom/blackbox-exporter:v0.29.0@sha256:9613f2884689b6fad9f1939f6a3b0388c93a022cfaededb19545b329b5c83dea
+    container_name: blackbox-exporter
+    user: ${MONITORING_UID}:${MONITORING_GID}
+    deploy:
+      resources:
+        limits:
+          # New at the cutover; blackbox-exporter needs a few tens of MB
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:9115/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    command:
+      - '--config.file=/etc/blackbox_exporter/blackbox.yml'
+      - '--log.level=warn'
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "3"
+    volumes:
+      - ./blackbox.yml:/etc/blackbox_exporter/blackbox.yml:ro
+    # http_prometheus_auth (blackbox.yml) signs in as `prometheus` with it.
+    secrets:
+      - prometheus_password
+    # Probes take the public path out through the Stack's default network.
+    networks:
+      - default
+
+# Prometheus's machine credential, stored encrypted in repo as <name>.sops.txt
+secrets:
+  prometheus_password:
+    file: ../prometheus/prometheus_password.sops.txt

@@ -7,57 +7,176 @@ rule_files:
   - /etc/prometheus/recording-rules.yml
   - /etc/prometheus/alerting-rules.yml
 
+# Prometheus and Alertmanager both require basic auth (web.sops.yml). The `prometheus` user is
+# a machine credential shared by both; its password is a Compose secret.
 alerting:
   alertmanagers:
     - scheme: http
+      basic_auth:
+        username: prometheus
+        password_file: /run/secrets/prometheus_password
       static_configs:
         - targets: ['alertmanager:9093']
 
+# Every target carries `stack` and `tier` labels; TargetDown alerts route on them.
+# An exporter's tier is about the exporter itself. The Service it describes is covered
+# by container alerts from cAdvisor, which use that Service's own `tier` label.
 scrape_configs:
-  # COMMON STACK
+  # EDGE STACK
   - job_name: traefik
     static_configs:
-      - targets: [ 'traefik:8082']
-        labels:
-          container: 'traefik'
+      - targets: ['traefik:8082']
+        labels: {container: traefik, stack: edge, tier: critical}
 
   - job_name: crowdsec
     static_configs:
-      - targets: [ 'crowdsec:6060']
-        labels:
-          container: 'crowdsec'
-          
-  # XFER STACK
+      - targets: ['crowdsec:6060']
+        labels: {container: crowdsec, stack: edge, tier: critical}
+
+  # OPS STACK
+  - job_name: doco-cd
+    static_configs:
+      - targets: ['doco-cd:9120']
+        labels: {container: doco-cd, stack: ops, tier: critical}
+
+  # XFER STACK: indexer health from nzbhydra2's stats API (alerting-rules.yml, nzbhydra2).
   - job_name: nzbhydra2
     scrape_interval: 60s
     scrape_timeout: 30s
     static_configs:
-      - targets: [ 'nzbhydra2-exporter:9811' ]
-        labels:
-          container: 'nzbhydra2-exporter'
+      - targets: ['nzbhydra2-exporter:9811']
+        labels: {container: nzbhydra2-exporter, stack: xfer, tier: info}
 
-  # core monitoring services. likely do not need to be modified.
+  # MONITORING STACK
   - job_name: prometheus
+    basic_auth:
+      username: prometheus
+      password_file: /run/secrets/prometheus_password
     static_configs:
-      - targets: [ 'localhost:9090' ]
-        labels:
-          container: 'prometheus'
+      - targets: ['localhost:9090']
+        labels: {container: prometheus, stack: monitoring, tier: critical}
 
   - job_name: alertmanager
+    basic_auth:
+      username: prometheus
+      password_file: /run/secrets/prometheus_password
     static_configs:
-      - targets: [ 'alertmanager:9093' ]
-        labels:
-          container: 'alertmanager'
+      - targets: ['alertmanager:9093']
+        labels: {container: alertmanager, stack: monitoring, tier: critical}
 
+  # node-exporter and cAdvisor feed the Host and container alerts, so losing them is Warning.
+  # honor_labels keeps the `stack`, `name` and `tier` of homeops_container_declared (its textfile);
+  # no other node-exporter series carries those labels, so the target labels still apply to them.
   - job_name: node-exporter
+    honor_labels: true
     static_configs:
-      - targets: [ 'node-exporter:9100' ]
-        labels:
-          container: 'node-exporter'
+      - targets: ['node-exporter:9100']
+        labels: {container: node-exporter, stack: monitoring, tier: warning}
 
   - job_name: cadvisor
     static_configs:
-      - targets: [ 'cadvisor:8080' ]
-        labels:
-          container: 'cadvisor'
+      - targets: ['cadvisor:8080']
+        labels: {container: cadvisor, stack: monitoring, tier: warning}
 
+  # Ships container logs to Loki; down means logs are being lost.
+  - job_name: alloy
+    static_configs:
+      - targets: ['alloy:12345']
+        labels: {container: alloy, stack: monitoring, tier: warning}
+
+  - job_name: loki
+    static_configs:
+      - targets: ['loki:3100']
+        labels: {container: loki, stack: monitoring, tier: warning}
+
+  # One series per container with a health check. honor_labels keeps each series' own
+  # `container`, `stack` and `tier`; the target labels apply to container_health_up.
+  - job_name: container-health
+    scrape_interval: 30s
+    honor_labels: true
+    static_configs:
+      - targets: ['container-health-exporter:9714']
+        labels: {container: container-health-exporter, stack: monitoring, tier: info}
+
+  - job_name: blackbox-exporter
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+        labels: {container: blackbox-exporter, stack: monitoring, tier: warning}
+
+  # PROBES (GLOSSARY.md): outside-in, through Cloudflare and Traefik as a user would.
+  # Targets are containers labelled `probe.url`, with `probe.module` (default http_2xx) naming a
+  # blackbox.yml module, found through docker-socket-proxy. `container`, `service`, `stack` and
+  # `tier` come from the probed Service, so ProbeFailed routes at that Service's Tier. docker_sd
+  # emits one target per network/port; they relabel to identical label sets and Prometheus keeps one.
+  - job_name: probe
+    scrape_interval: 30s
+    metrics_path: /probe
+    docker_sd_configs:
+      - host: tcp://docker-socket-proxy:2375
+        refresh_interval: 60s
+        filters:
+          - name: label
+            values: [probe.url]
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_probe_url]
+        target_label: __param_target
+      - target_label: __param_module
+        replacement: http_2xx
+      - source_labels: [__meta_docker_container_label_probe_module]
+        regex: (.+)
+        target_label: __param_module
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [__param_module]
+        target_label: module
+      - source_labels: [__meta_docker_container_name]
+        regex: /?(.*)
+        target_label: container
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: stack
+      - source_labels: [__meta_docker_container_label_tier]
+        target_label: tier
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Two well-known sites off Cloudflare. All failing means the Host's Internet is down: InternetDown
+  # fires and inhibits ProbeFailed.
+  - job_name: internet
+    scrape_interval: 30s
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ['https://www.gstatic.com/generate_204', 'https://detectportal.firefox.com/success.txt']
+        labels: {stack: monitoring, tier: warning}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # DEPENDENCY PROBES (GLOSSARY.md): one per edge, from dependencies.yml (rendered by
+  # dependencies-render, so URLs and keys can come from .sops.env). Each runs on the blackbox named
+  # by `prober`. `instance` becomes from->to so a URL with a key never lands in a series.
+  - job_name: dependency
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: /probe
+    file_sd_configs:
+      - files: [/etc/prometheus/sd/dependencies.yml]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [module]
+        target_label: __param_module
+      - source_labels: [from, to]
+        separator: '->'
+        target_label: instance
+      - source_labels: [prober]
+        target_label: __address__
+      - regex: prober
+        action: labeldrop

@@ -5,9 +5,12 @@
 #
 # doco-cd deploys every Stack it finds at nc8kg1101/<stack>/compose.yaml; the folder name is the
 # Compose project name. The legacy nc8kg1101/<group>/docker-compose.yaml Stacks (asot, common,
-# monitoring, xfer) never match compose_files, so doco-cd never deploys them; and since delete only
+# xfer) never match compose_files, so doco-cd never deploys them; and since delete only
 # removes projects doco-cd itself labelled, it never removes them either. A cutover that adds a
 # compose.yaml to one of those folders hands that project to doco-cd on merge.
+# Reverting such a cutover hands it back only once doco-cd, running, has deleted the project on its
+# next poll. That deletion takes down the whole Compose project, so a group re-added to Portainer
+# before then would lose the containers Portainer started.
 #
 # Removing a Stack folder removes that Stack from the Host; its volumes are kept.
 working_dir: nc8kg1101

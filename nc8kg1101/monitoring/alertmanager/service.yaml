@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  alertmanager:
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: prom/alertmanager:v0.34.1@sha256:e9733bafb1bdef9b00e25a21f8f99dc26a22224bf16641ad754d1649f4c3357a
+    container_name: alertmanager
+    # Root, as under Portainer, which wrote the existing silences and notification log as root into
+    # the image's nobody-owned /alertmanager (see prometheus/service.yaml).
+    user: "0:0"
+    cap_add: [DAC_OVERRIDE]
+    deploy:
+      resources:
+        limits:
+          # 40M working set at cutover
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9093"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--web.config.file=/etc/alertmanager/web.yml'
+      - '--log.level=error'
+      - '--storage.path=/alertmanager'
+      # Not routed by Traefik: hops reaches it with docker exec (amtool), Prometheus over default.
+      - '--web.external-url=http://alertmanager:9093'
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "1"
+      stack-back.volumes: true
+      stack-back.volumes.include: "alertmanager_data"
+    volumes:
+      - ./config.yml:/etc/alertmanager/config.yml:ro
+      - type: bind
+        source: ./web.sops.yml
+        target: /etc/alertmanager/web.yml
+        read_only: true
+        # Stored encrypted in repo
+        x-sops: true
+      - alertmanager_data:/alertmanager
+    # Page (Pushover), Digest (Discord) and Heartbeat (healthchecks.io); see config.yml.
+    # scripts/monitoring-secrets.sh writes them.
+    secrets:
+      - pushover_user_key
+      - pushover_token
+      - discord_webhook
+      - watchdog_url
+    networks:
+      - default
+
+volumes:
+  # Created by the legacy monitoring group under the same name, kept at the cutover (asotbz/ops#302).
+  alertmanager_data:
+    name: monitoring_alertmanager_data
+    external: true
+
+# Stored encrypted in repo as <name>.sops.txt
+secrets:
+  pushover_user_key:
+    file: ./pushover_user_key.sops.txt
+  pushover_token:
+    file: ./pushover_token.sops.txt
+  discord_webhook:
+    file: ./discord_webhook.sops.txt
+  watchdog_url:
+    file: ./watchdog_url.sops.txt

@@ -8,13 +8,10 @@ services:
     env_file: ./outline.env
     user: ${ASOT_UID}:${ASOT_GID}
     labels:
+      # Alert Tier (asotbz/ops#302): critical | warning | info
+      tier: critical
       stack-back.volumes: true
       stack-back.volumes.include: "outline_data"
-      
-      # logs collection
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: kb
 
       traefik.enable: true
 
@@ -32,6 +29,9 @@ services:
       traefik.http.routers.outline-https.middlewares: crowdsec-bouncer
 
       traefik.http.services.outline.loadbalancer.server.port: 3000
+
+      # Probe: the public path a user takes (monitoring/prometheus/prometheus.yml)
+      probe.url: https://oln.${DOMAIN}/_health
 
       # network policy
       whalewall.enabled: true
