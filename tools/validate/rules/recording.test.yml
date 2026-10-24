@@ -275,7 +275,7 @@ tests:
           - labels: 'service:availability:ratio1d{container="db",tier="critical",stack="app"}'
             value: 0.42857142857142855
 
-  - name: A blind exporter is not downtime, so stale series are not zero-filled while it is down
+  - name: A down exporter is not downtime, so stale series are not zero-filled while it is down
     interval: 1m
     input_series:
       - series: homeops_container_declared{stack="app",service="db",name="db",tier="critical"}
@@ -287,6 +287,39 @@ tests:
     promql_expr_test:
       - expr: service:uptime:ok
         eval_time: 20m
+        exp_samples: []
+
+  - name: A blind exporter (Docker API unreachable, still scraped) is not downtime either
+    interval: 1m
+    input_series:
+      - series: homeops_container_declared{stack="app",service="db",name="db",tier="critical"}
+        values: 1+0x30
+      - series: container_healthy{job="container-health",container="db",tier="critical",stack="app"}
+        values: 1+0x4 _x26
+      - series: up{job="container-health"}
+        values: 1+0x30
+      - series: container_health_up{job="container-health"}
+        values: 1+0x4 0+0x26
+    promql_expr_test:
+      - expr: service:uptime:ok
+        eval_time: 20m
+        exp_samples: []
+
+  - name: Zero-fill lasts a day after the last health sample, then the Service drops out
+    interval: 10m
+    input_series:
+      - series: homeops_container_declared{stack="app",service="db",name="db",tier="critical"}
+        values: 1+0x200
+      - series: container_healthy{job="container-health",container="db",tier="critical",stack="app"}
+        values: 1 _x200
+    promql_expr_test:
+      - expr: service:uptime:ok
+        eval_time: 23h
+        exp_samples:
+          - labels: 'service:uptime:ok{container="db",tier="critical",stack="app"}'
+            value: 0
+      - expr: service:uptime:ok
+        eval_time: 25h
         exp_samples: []
 
   - name: Availability averages only the rolling day of Uptime
