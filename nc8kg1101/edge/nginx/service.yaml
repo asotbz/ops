@@ -22,7 +22,7 @@ services:
       start_interval: 5s
     labels:
       # Alert Tier (GLOSSARY.md): critical | warning | info
-      tier: warning
+      tier: critical
       startup-order: "0"
       # Legacy log collection (monitoring's promtail) until monitoring is cut over.
       logging: promtail

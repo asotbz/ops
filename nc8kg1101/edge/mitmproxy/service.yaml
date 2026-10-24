@@ -37,7 +37,7 @@ services:
       - ORX_BASE=${ORX_BASE}
     labels:
       # Alert Tier (GLOSSARY.md): critical | warning | info
-      tier: warning
+      tier: critical
       startup-order: "0"
       stack-back.volumes: true
       stack-back.volumes.include: "mitmproxy_data"
@@ -86,7 +86,7 @@ services:
     container_name: openresty
     # nobody: as root, nginx would need SETUID/SETGID to drop its workers' privileges.
     user: "65534:65534"
-    # nginx.conf comes from a directory mount (see nginx/service.yaml) and keeps temp files and its
+    # nginx.conf comes from ./openresty, a directory mount of the repo, and keeps temp files and its
     # pid under the tmpfs at /var/run/openresty.
     command: ["/usr/bin/openresty", "-c", "/etc/orx/nginx.conf", "-g", "daemon off;"]
     deploy:
@@ -106,7 +106,7 @@ services:
       - ORX_PSK=${ORX_PSK}
     labels:
       # Alert Tier (GLOSSARY.md): critical | warning | info
-      tier: warning
+      tier: critical
       startup-order: "0"
       # Legacy log collection (monitoring's promtail) until monitoring is cut over.
       logging: promtail
