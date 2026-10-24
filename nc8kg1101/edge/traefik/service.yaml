@@ -1,13 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 services:
   traefik:
-    image: traefik:v3.7.13
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    # https://hub.docker.com/_/traefik
+    image: traefik:v3.7.13@sha256:1c32e7c368204fd72812152ebdd2ac0425993df6fd982317deb02e48f2d5423c
     container_name: traefik
     user: ${COMMON_UID}:${COMMON_GID}
     group_add:
       - ${DOCKER_GID}
-    security_opt:
-      - no-new-privileges=true
-    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          # 114M working set at cutover
+          memory: 384M
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8082/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
     command:
       # Debug-level logging as necessary
       # - --log.level=DEBUG
@@ -22,11 +39,21 @@ services:
       # Enable Docker support and only proxy containers that are explicitly declared
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      # Reach every routed Service over the proxy network, whichever other networks it is on
+      - --providers.docker.network=proxy
 
       # Entrypoints
       - --entrypoints.https.address=:443
       - --entrypoints.http.address=:80
+      # Trust X-Forwarded-For only from Cloudflare's edge, so access logs (CrowdSec) and the
+      # bouncer see the real client instead of a Cloudflare IP. All three lists must match
+      # (homelab-validate cloudflare).
+      - --entrypoints.https.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
+      - --entrypoints.http.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
       - --entrypoints.metrics.address=:8082
+      # The healthcheck's endpoint; :8082 is not published
+      - --ping=true
+      - --ping.entryPoint=metrics
 
       # Let's Encrypt/ACME configuration
       - --certificatesresolvers.letsencrypt.acme.dnschallenge=true
@@ -45,21 +72,24 @@ services:
       # Provide Cloudflare secret for DNS01 validation
       - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "0"
       stack-back.volumes: true
       stack-back.volumes.include: "traefik_le"
-      
+      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
       logging: promtail
       logging_jobname: containerlogs
-      stackname: common
+      stackname: edge
 
       # Traefik Dashboard
       traefik.enable: true
-      
+
       # Listen on http, but redirect all requests to https
       traefik.http.routers.traefik-http.rule: Host(`traefik.${DOMAIN}`)
       traefik.http.routers.traefik-http.entrypoints: http
       traefik.http.routers.traefik-http.middlewares: redirect-https
-      
+
       # Direct https requests to internal API, protecting with basic auth and crowdsec
       traefik.http.routers.traefik-https.rule: Host(`traefik.${DOMAIN}`)
       traefik.http.routers.traefik-https.entrypoints: https
@@ -68,22 +98,27 @@ services:
       traefik.http.routers.traefik-https.service: api@internal
       traefik.http.routers.traefik-https.middlewares: traefik-dashboard
 
+      # Probe (GLOSSARY.md): the public path a user takes. Unused until monitoring is cut over.
+      probe.url: https://traefik.${DOMAIN}/
+
       traefik.http.middlewares.traefik-auth.basicauth.users: ${TRAEFIK_USER}:${TRAEFIK_PASSWORD_HASH}
       traefik.http.middlewares.traefik-dashboard.chain.middlewares: crowdsec-bouncer,traefik-auth
 
       # Default TLS certificate
       traefik.tls.stores.default.defaultgeneratedcert.resolver: ${CERT_RESOLVER}
       traefik.tls.stores.default.defaultgeneratedcert.domain.main: ${DOMAIN}
-      
+
       # Enable strict SNI checking
       traefik.tls.options.default.sniStrict: true
 
-      # Common middleware configuration
+      # Common middleware configuration, used by routed Services in every Stack
       ## Crowdsec bouncer
       traefik.http.middlewares.crowdsec-bouncer.plugin.crowdsec-bouncer.enabled: true
       ## Debug logging as necessary
       # traefik.http.middlewares.crowdsec-bouncer.plugin.crowdsec-bouncer.loglevel: DEBUG
       traefik.http.middlewares.crowdsec-bouncer.plugin.crowdsec-bouncer.crowdseclapikey: ${TRAEFIK_BOUNCER_API_KEY}
+      # Same Cloudflare ranges as the entrypoints' forwardedHeaders.trustedIPs
+      traefik.http.middlewares.crowdsec-bouncer.plugin.crowdsec-bouncer.forwardedHeadersTrustedIPs: 173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
 
       # Appsec
       traefik.http.middlewares.crowdsec-bouncer.plugin.crowdsec-bouncer.crowdsecAppsecEnabled: true
@@ -91,41 +126,6 @@ services:
 
       ## Redirect to HTTPS
       traefik.http.middlewares.redirect-https.redirectScheme.scheme: https
-
-      # network policy
-      whalewall.enabled: true
-      # traefik: allow requests inbound from external addresses. allow outbound dns/http/https.
-      whalewall.rules: |
-        mapped_ports:
-          external:
-            allow: true
-        output:
-          # DNS
-          - proto: udp
-            dst_ports:
-              - 53
-          # HTTP/S
-          - proto: tcp
-            dst_ports:
-              - 443
-              - 80
-          # crowdsec-bouncer
-          - network: common_backend
-            container: crowdsec
-          # metrics collection
-          - network: common_backend
-            container: prometheus
-          # allow communication outbound to downstream services on unpriv ports
-          - network: common_backend
-            proto: tcp
-            dst_ports:
-              - 1024-65535
-    logging:
-      driver: json-file
-      options:
-        max-size: 1m
-        max-file: 1
-        tag: "{{.Name}}"
     ports:
       - 443:443
       - 80:80
@@ -139,11 +139,26 @@ services:
       # Allow Traefik to get updates from the Docker engine
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      backend:
-        # Static IP within the backend network, so that we can constrain trusted proxies for other services
-        ipv4_address: ${TRAEFIK_BACKEND_IPV4}
+      # CrowdSec LAPI and AppSec
+      default: {}
+      proxy:
+        # Static, so Exposed Services can trust exactly this proxy. Also in mitmproxy/openresty/nginx.conf
+        # (set_real_ip_from) and outside the ip_range in compose.yaml; change them together.
+        ipv4_address: 172.30.0.10
+      # Prometheus scrapes traefik:8082
+      metrics: {}
 
 volumes:
+  # Moved from common_traefik_* at the cutover (asotbz/ops#301, ADR 0009).
+  # Read by CrowdSec too.
   traefik_log:
+    name: edge_traefik_log
+    external: true
   traefik_le:
+    name: edge_traefik_le
+    external: true
+  # Traefik re-downloads its contents, but not regenerable: the image has no /plugins-storage, so a
+  # volume Compose created would be root-owned and Traefik (non-root) could not write to it.
   traefik_plugins-storage:
+    name: edge_traefik_plugins-storage
+    external: true

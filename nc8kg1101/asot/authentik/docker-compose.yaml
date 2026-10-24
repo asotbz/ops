@@ -73,6 +73,8 @@ services:
         tag: "{{.Name}}"
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
   authentik-worker:
     image: ghcr.io/goauthentik/server:2026.5.5
     container_name: authentik-worker

@@ -69,6 +69,10 @@ services:
       # mitmproxy CA cert is copied to /config/certificates: https://github.com/theotherp/nzbhydra2/wiki/SSL-verification-errors
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+      # mitmproxy, the forward proxy it sends indexer requests through
+      - forward-proxy
 
 volumes:
   nzbhydra2_config:

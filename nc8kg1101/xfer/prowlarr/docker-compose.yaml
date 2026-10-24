@@ -66,6 +66,10 @@ services:
       - ./mitmproxy-ca-cert.pem:/etc/ssl/certs/mitmproxy-ca-cert.pem:ro
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+      # mitmproxy, the forward proxy it sends indexer requests through
+      - forward-proxy
 
 volumes:
   prowlarr_config:

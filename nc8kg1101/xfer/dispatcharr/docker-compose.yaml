@@ -82,6 +82,8 @@ services:
       - dispatcharr_data:/data
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
 
 volumes:
   dispatcharr_data:

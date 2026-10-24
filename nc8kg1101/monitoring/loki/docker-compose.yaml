@@ -61,3 +61,5 @@ services:
       - ./rules.yaml:/etc/loki/rules/fake/loki-rules.yml:ro
     networks:
       - backend
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy

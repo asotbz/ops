@@ -6,6 +6,10 @@ networks:
   backend:
     name: common_backend
     external: true
+  # Traefik and the Services it routes to; owned by the edge Stack (ADR 0002)
+  proxy:
+    name: proxy
+    external: true
 
 # Remaining services in the stack have their own Compose configuration. 
 include:
