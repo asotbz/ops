@@ -75,13 +75,13 @@ It needs the repo-root `.env`, the Host's private age key at `~/.config/sops/age
 1. Check the tools, the checkout and SSH access.
 2. Replace the placeholder notification URL in `nc8kg1101/ops/doco-cd/apprise_urls.sops.txt`, through a PR.
 3. Install the Host age key at `/etc/doco-cd/age.key`, checked by hash and never printed.
-4. Create the external volume `ops_doco-cd_data` and the `metrics` network (owned by monitoring from #302).
+4. Create the external volumes `ops_doco-cd_data` and `ops_stack-back_cache`, and the `metrics` network (owned by monitoring from #302).
 5. Remove xfer's old `apprise` container once Portainer has redeployed xfer.
 6. Copy `xfer_apprise_config` into `ops_apprise_config`. The old volume stays as the Rollback Volume ([ADR 0009](docs/adr/0009-volumes-named-for-their-stack.md)).
 7. Redeploy `common` by hand from `~/ops`, which removes `common-backup` before the new stack-back starts. Avoid the 09:12 backup.
 8. Run doco-cd once with `apply-self --bootstrap`. It deploys `nc8kg1101/ops`, including the long-lived doco-cd container, and exits.
 9. Verify that doco-cd, stack-back and Apprise are healthy and stack-back's schedule is set. Also check that Apprise is reachable from `common_backend` and that no legacy container was touched.
-10. Clean up the old stack-back cache and plaintext env, and note the Rollback Volume's release date.
+10. Remove the old stack-back cache. The wizard then lists what to release a week later: the Rollback Volume and common's plaintext `stack-back.env`, both of which a rollback needs until then.
 
 How doco-cd finds Stacks: its `POLL_CONFIG` polls `https://github.com/asotbz/ops.git` on `main` with `target: nc8kg1101`, so it reads only `.doco-cd.nc8kg1101.yml`. That file sets:
 
@@ -97,7 +97,7 @@ If the bootstrap has to be rolled back:
 1. `sudo docker rm -f doco-cd stack-back apprise`.
 2. Revert #300 on `main`.
 3. Redeploy xfer in Portainer, which brings back `apprise` on `xfer_apprise_config`.
-4. Redeploy `common` by hand.
+4. Redeploy `common` by hand. It needs `~/ops/nc8kg1101/common/stack-back.env` again, from `sops -d nc8kg1101/common/stack-back.sops.env` (piped straight into the file, never printed).
 
 ## Shared Repo Tooling
 

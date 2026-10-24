@@ -195,8 +195,6 @@ TOTAL_STAGES=10
 
 OPERATOR="${OPERATOR:-doogie@nc8kg1101.asot.bz}"
 AGE_KEY_FILE="${AGE_KEY_FILE:-$HOME/.config/sops/age/nc8kg1101.txt}"
-# The Host recipient in .sops.yaml (its first ^nc8kg1101/ key); the other one is @jbruns' editing key.
-HOST_RECIPIENT="age1zuj5rfeejm3j4jhf5ama25uxzj06a7clxd0u4qvn24cu6d8h4dhs27267v"
 HOST_AGE_KEY="/etc/doco-cd/age.key"
 REPO_URL="https://github.com/asotbz/ops.git"
 URLS_FILE="nc8kg1101/ops/doco-cd/apprise_urls.sops.txt"
@@ -269,6 +267,9 @@ ok "main is up to date and holds nc8kg1101/ops"
 agent true || die "cannot reach the Host as $HOPS_NC8KG1101_SSH_USER"
 ok "reached the Host as $HOPS_NC8KG1101_SSH_USER"
 [[ -f "$AGE_KEY_FILE" ]] || die "no Host age key at $AGE_KEY_FILE (set AGE_KEY_FILE)"
+# The Host recipient: the first key of .sops.yaml's ^nc8kg1101/ rule; the other is @jbruns' editing key.
+HOST_RECIPIENT=$(sed -n '/path_regex: \^nc8kg1101\//,/path_regex/p' .sops.yaml | grep -o 'age1[0-9a-z]*' | head -n1)
+[[ -n "$HOST_RECIPIENT" ]] || die "no ^nc8kg1101/ recipient in .sops.yaml"
 if command -v age-keygen >/dev/null 2>&1; then
   [[ "$(age-keygen -y "$AGE_KEY_FILE")" == "$HOST_RECIPIENT" ]] || die "$AGE_KEY_FILE is not the Host key ($HOST_RECIPIENT)"
   ok "$AGE_KEY_FILE holds the Host key"
@@ -282,7 +283,9 @@ pause
 stage "doco-cd's notification URL"
 say "doco-cd posts its deploy results through apprise to the URL in $URLS_FILE."
 say "#300 left a placeholder there; replacing it is a PR, merged before the bootstrap."
-if [[ "$(sops -d "$URLS_FILE" | shasum -a 256)" != "$(printf '%s' "$URLS_PLACEHOLDER" | shasum -a 256)" ]]; then
+# Compared by hash, never shown; a failed decrypt stops the wizard rather than reading as "set".
+urls_hash=$(sops -d "$URLS_FILE" | shasum -a 256) || die "cannot decrypt $URLS_FILE with your sops key"
+if [[ "$urls_hash" != "$(printf '%s' "$URLS_PLACEHOLDER" | shasum -a 256)" ]]; then
   ok "the URL is already set"
 elif confirm "Replace the placeholder now (otherwise doco-cd's notifications fail until someone does)?"; then
   if confirm "Reuse stack-back's Discord webhook (DISCORD_WEBHOOK in $STACK_BACK_ENV)?"; then
@@ -344,16 +347,18 @@ pause
 stage "Create the volume and network the ops Stack expects"
 say "Both are external in nc8kg1101/ops, so Compose never creates them:"
 step "volume ops_doco-cd_data: doco-cd's clones and deploy state"
+step "volume ops_stack-back_cache: stack-back's restic cache"
 step "network metrics: owned by the monitoring Stack (ADR 0002), created here until monitoring is cut over (#302)."
 note "It carries Compose's labels for monitoring's network key, so monitoring adopts it then."
 note "The backup network is the ops Stack's own; Compose creates it. common_backend exists already."
-have_volume=no; have_network=no
-exists volume ops_doco-cd_data && have_volume=yes
+missing_volumes=()
+for v in ops_doco-cd_data ops_stack-back_cache; do exists volume "$v" || missing_volumes+=("$v"); done
+have_network=no
 exists network metrics && have_network=yes
-if [[ "$have_volume$have_network" == yesyes ]]; then
-  ok "both exist"
+if [[ ${#missing_volumes[@]} == 0 && "$have_network" == yes ]]; then
+  ok "all exist"
 elif confirm "Create the missing ones?"; then
-  [[ "$have_volume" == yes ]] || operator "sudo docker volume create ops_doco-cd_data >/dev/null"
+  for v in "${missing_volumes[@]}"; do operator "sudo docker volume create $v >/dev/null"; done
   [[ "$have_network" == yes ]] || operator "sudo docker network create --driver bridge \
     --label com.docker.compose.project=monitoring --label com.docker.compose.network=metrics metrics >/dev/null"
   ok "created"
@@ -458,8 +463,19 @@ agent "sudo -n docker ps -a --filter label=com.docker.compose.project=ops \
   --format '  {{.Names}}  {{.Status}}  deployed-by-doco-cd={{.Label \"cd.doco.deployment.name\"}}'"
 [[ "$(agent "sudo -n docker ps -q --filter label=cd.doco.deployment.name=ops" | wc -l | tr -d ' ')" == 3 ]] \
   || { warn "expected 3 running ops containers labelled by doco-cd"; failed=1; }
-say "doco-cd's latest poll and deploy lines:"
-agent "sudo -n docker logs --since 15m doco-cd 2>&1 | grep -iE 'poll|deploy' | tail -n 5" || true
+say "Waiting for the doco-cd container's own first poll of main (up to 4 minutes)..."
+poll=""
+for _ in $(seq 1 48); do
+  poll=$(agent "sudo -n docker logs doco-cd 2>&1 | grep -E 'job completed (successfully|with errors)' | tail -n1" || true)
+  [[ -n "$poll" ]] && break
+  sleep 5
+done
+if [[ "$poll" == *successfully* ]]; then
+  ok "doco-cd polled main and finished without errors"
+else
+  warn "doco-cd's first poll ${poll:+failed: $poll}${poll:-did not finish}; see sudo docker logs doco-cd"
+  failed=1
+fi
 wait_healthy stack-back || failed=1
 say "stack-back's schedule:"
 agent "sudo -n docker exec stack-back crontab -l" || failed=1
@@ -500,15 +516,10 @@ if exists volume common_backup_cache \
   operator "sudo docker volume rm common_backup_cache >/dev/null"
   ok "removed"
 fi
-# shellcheck disable=SC2016 # expanded on the Host
-if ssh "$OPERATOR" 'test -e ~/ops/nc8kg1101/common/stack-back.env' \
-  && confirm "Shred the plaintext ~/ops/nc8kg1101/common/stack-back.env on the Host (no longer used)?"; then
-  operator 'shred -u ~/ops/nc8kg1101/common/stack-back.env'
-  ok "shredded"
-fi
-say "Rollback Volume $OLD_APPRISE_VOLUME: release it on $RELEASE if notifications still work:"
-step "ssh -t $OPERATOR sudo docker volume rm $OLD_APPRISE_VOLUME"
-SKIPPED+=("release Rollback Volume $OLD_APPRISE_VOLUME on $RELEASE and tick it off in #300's PR")
+say "Release on $RELEASE, once notifications and backups still work (until then a rollback needs both):"
+step "Rollback Volume $OLD_APPRISE_VOLUME: ssh -t $OPERATOR sudo docker volume rm $OLD_APPRISE_VOLUME"
+step "common's plaintext env: ssh $OPERATOR 'shred -u ~/ops/nc8kg1101/common/stack-back.env'"
+SKIPPED+=("on $RELEASE: remove $OLD_APPRISE_VOLUME, shred ~/ops/nc8kg1101/common/stack-back.env, tick #300's PR")
 pause
 
 finish
