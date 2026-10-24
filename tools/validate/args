@@ -8,7 +8,7 @@
 # --path NAME=PATH: a homelab-validate input, passed explicitly so a missing one fails instead of being skipped.
 #   When a cutover adds a component homelab-validate reads (edge: traefik; monitoring: prometheus, rule-tests,
 #   alertmanager, loki, alloy, grafana, ...), add its --path in the same PR. Names:
-#   https://github.com/jbruns/homelab-components/blob/ca0e27945953fad76fbfd1c812a1f74bc37d2c15/repo-tools/validate/README.md#inputs
+#   https://github.com/jbruns/homelab-components/blob/61ac20cf78072fe6eacdd4633099e8f35e7541dc/repo-tools/validate/README.md#inputs
 --legacy-stack common
 --legacy-stack monitoring
 --legacy-stack asot
