@@ -282,11 +282,14 @@ step "Copy its 'API Token/Key' (30 letters and digits)."
 collect PUSHOVER_TOKEN pushover_token "Paste the API token:" '^[A-Za-z0-9]{30}$' "30 letters and digits"
 if [[ -z "$NO_PR" ]]; then
   # Validates the pair without sending anything; the values go in on stdin, never in argv.
-  if printf 'token=%s&user=%s' "$PUSHOVER_TOKEN" "$PUSHOVER_USER_KEY" \
-      | curl -fsS -d @- https://api.pushover.net/1/users/validate.json >/dev/null 2>&1; then
+  # Pushover's error text names the problem (bad token, bad user, no active devices) and holds no secret.
+  reply=$(printf 'token=%s&user=%s' "$PUSHOVER_TOKEN" "$PUSHOVER_USER_KEY" \
+      | curl -sS -d @- https://api.pushover.net/1/users/validate.json 2>&1) || true
+  if [[ "$(jq -r '.status // 0' <<<"$reply" 2>/dev/null)" == "1" ]]; then
     ok "Pushover accepts the token and user key"
   else
-    die "Pushover rejected the token or user key; re-run and paste them again"
+    warn "Pushover says: $(jq -r '(.errors // ["unreadable reply"]) | join("; ")' <<<"$reply" 2>/dev/null || echo "unreadable reply")"
+    die "Pushover rejected the token or user key; fix that and re-run"
   fi
 fi
 pause
