@@ -141,6 +141,45 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox-exporter:9115
 
+  # A Protected Service (ADR 0005) carries a second Probe, `probe.idp_url`: its login path must
+  # answer an anonymous request with a redirect to the IdP (blackbox.yml http_idp_redirect, never
+  # followed). `auth` names the mechanism: forward unless the Service sets `probe.idp_auth: oidc`.
+  # Same discovery and labels as `probe`.
+  - job_name: probe-idp
+    scrape_interval: 60s
+    metrics_path: /probe
+    params:
+      module: [http_idp_redirect]
+    docker_sd_configs:
+      - host: tcp://docker-socket-proxy:2375
+        refresh_interval: 60s
+        filters:
+          - name: label
+            values: [probe.idp_url]
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_probe_idp_url]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: module
+        replacement: http_idp_redirect
+      - target_label: auth
+        replacement: forward
+      - source_labels: [__meta_docker_container_label_probe_idp_auth]
+        regex: (.+)
+        target_label: auth
+      - source_labels: [__meta_docker_container_name]
+        regex: /?(.*)
+        target_label: container
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+      - source_labels: [__meta_docker_container_label_com_docker_compose_project]
+        target_label: stack
+      - source_labels: [__meta_docker_container_label_tier]
+        target_label: tier
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
   # Two well-known sites off Cloudflare. All failing means the Host's Internet is down: InternetDown
   # fires and inhibits ProbeFailed.
   - job_name: internet

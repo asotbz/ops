@@ -210,6 +210,11 @@ tests:
   - name: Uptime needs every Exposed Service Probe and prefers Probes over container health
     interval: 1m
     input_series:
+      # A Protected Service whose health path answers but whose login no longer redirects to the IdP.
+      - series: probe_success{job="probe",instance="https://sso.example/health",container="sso",tier="critical",stack="app"}
+        values: 1+0x3
+      - series: probe_success{job="probe-idp",instance="https://sso.example/login",container="sso",tier="critical",stack="app"}
+        values: 0+0x3
       - series: probe_success{job="probe",instance="https://web.example/",container="web",tier="critical",stack="app"}
         values: 1+0x3
       - series: probe_success{job="probe",instance="https://web.example/api",container="web",tier="critical",stack="app"}
@@ -230,6 +235,8 @@ tests:
             value: 0
           - labels: 'service:uptime:ok{container="db",tier="critical",stack="app"}'
             value: 1
+          - labels: 'service:uptime:ok{container="sso",tier="critical",stack="app"}'
+            value: 0
 
   - name: A declared Service whose health or Probe series goes stale reads 0; a retired one drops out
     interval: 1m

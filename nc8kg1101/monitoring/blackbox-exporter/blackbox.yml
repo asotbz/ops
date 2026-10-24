@@ -41,6 +41,19 @@ modules:
       preferred_ip_protocol: ip4
       valid_status_codes: [403]
 
+  # A Protected Service's `probe.idp_url` (job probe-idp): its login path answers an anonymous
+  # request by redirecting to the IdP's authorize endpoint. Not followed, so the IdP is never touched.
+  http_idp_redirect:
+    prober: http
+    timeout: 8s
+    http:
+      preferred_ip_protocol: ip4
+      follow_redirects: false
+      valid_status_codes: [302]
+      fail_if_header_not_matches:
+        - header: Location
+          regexp: /application/o/authorize/
+
   tcp_connect:
     prober: tcp
     timeout: 8s
