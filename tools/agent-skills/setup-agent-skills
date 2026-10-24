@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# setup-agent-skills from jbruns/homelab-components (shared Repo Tooling), pinned by commit; see docs/agents/skills.md.
+# Usage and the .agent-skills.lock format: https://github.com/jbruns/homelab-components/tree/main/repo-tools/agent-skills
+set -euo pipefail
+tag=agent-skills-v1.0.0
+commit=afd9b9d128515876316f6e51cd0218ebccb3edf9
+export AGENT_SKILLS_COMMAND="$0"
+cd "$(dirname "${BASH_SOURCE[0]}")"
+exec uvx --quiet --from "git+https://github.com/jbruns/homelab-components@${commit}#subdirectory=repo-tools/agent-skills" \
+  setup-agent-skills "$@"

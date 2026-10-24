@@ -1,12 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "github>jbruns/homelab-components//renovate/repo-default#repo-ci-v1.0.2"
   ],
-  "minimumReleaseAge": "5 days",
-  "minimumReleaseAgeBehaviour": "timestamp-optional",
   "schedule": ["* 10-13 * * 5"],
-  "timezone": "America/Los_Angeles",
   "packageRules": [
     {
       "description": "Disable Docker-sourced updates for portainer/portainer-ee (handled by custom manager)",
@@ -15,9 +12,9 @@
       "enabled": false
     },
     {
-      "description": "Automerge patch version updates",
-      "matchUpdateTypes": ["patch"],
-      "automerge": true
+      "description": "The setup-agent-skills wrapper's own PR, apart from the repo-ci group the preset puts every homelab-components tag in",
+      "matchFileNames": ["tools/agent-skills/setup-agent-skills"],
+      "groupName": "homelab-components agent-skills"
     }
   ],
   "customManagers": [
@@ -25,7 +22,8 @@
       "customType": "regex",
       "description": "Use custom datasource for portainer-ee to only track LTS releases",
       "managerFilePatterns": [
-        "/(^|/)docker-compose\\.ya?ml$/"
+        "/(^|/)(docker-)?compose\\.ya?ml$/",
+        "/(^|/)service\\.ya?ml$/"
       ],
       "matchStrings": [
         "image:\\s*portainer/portainer-ee:(?<currentValue>[\\d.]+)"
@@ -33,6 +31,17 @@
       "depNameTemplate": "portainer-ee",
       "datasourceTemplate": "custom.portainer-lts",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "setup-agent-skills wrapper: shared Repo Tooling pinned by tag and commit (homelab-components repo-tools/agent-skills README)",
+      "managerFilePatterns": ["/(^|/)tools/agent-skills/setup-agent-skills$/"],
+      "matchStrings": [
+        "tag=(?<currentValue>agent-skills-v\\S+)\\s+commit=(?<currentDigest>[0-9a-f]{40})"
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "jbruns/homelab-components",
+      "versioningTemplate": "regex:^agent-skills-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
     }
   ],
   "customDatasources": {

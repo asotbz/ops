@@ -1,0 +1,5 @@
+# Agent skills for this repo (tools/agent-skills/setup-agent-skills; docs/agents/skills.md).
+# Keep revision on the commit ref resolves to.
+source https://github.com/mattpocock/skills.git
+ref v1.3.1
+revision 24fe0ef7737efae15c87225755e9f6f5965e4888
