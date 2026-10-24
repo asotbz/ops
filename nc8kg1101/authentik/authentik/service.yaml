@@ -1,5 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 # Authentik's server (web UI, API, embedded outpost) and worker (background tasks), one image.
+# They share everything but command, labels and networks, so one x- fragment holds it (as
+# upstream's compose file does); ADR 0006's objection to fragments is that they don't cross include.
 # https://docs.goauthentik.io/install-config/install/docker-compose/
 #
 # No Docker socket: the worker only needs it for a Docker outpost integration, and this Host runs
@@ -16,6 +18,12 @@ x-authentik: &authentik
   user: ${AUTHENTIK_UID}:${AUTHENTIK_GID}
   # As upstream's compose file.
   shm_size: 512mb
+  deploy:
+    resources:
+      limits:
+        # No working set measured yet (Portainer ran it without a limit); upstream sizes the whole
+        # install at 2 GB.
+        memory: 1536M
   healthcheck:
     # The image's own check; it probes the server or worker, whichever this container runs.
     test: ["CMD", "ak", "healthcheck"]
@@ -45,12 +53,6 @@ services:
     <<: *authentik
     container_name: authentik-server
     command: server
-    deploy:
-      resources:
-        limits:
-          # No working set measured yet (Portainer ran it without a limit); upstream sizes the whole
-          # install at 2 GB.
-          memory: 1536M
     labels:
       # Alert Tier (GLOSSARY.md): critical | warning | info
       # The IdP is Critical: every Protected Service fails with it (ADR 0005).
@@ -88,12 +90,6 @@ services:
     <<: *authentik
     container_name: authentik-worker
     command: worker
-    deploy:
-      resources:
-        limits:
-          # No working set measured yet (Portainer ran it without a limit); upstream sizes the whole
-          # install at 2 GB.
-          memory: 1536M
     labels:
       # Alert Tier (GLOSSARY.md): critical | warning | info
       # Without it, flows that run tasks (email, outpost and blueprint updates) stall.
