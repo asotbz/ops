@@ -53,7 +53,7 @@ jobs:
     with:
       checks: secrets env compose cloudflare isolation
       extra-args: ${{ needs.validate-args.outputs.args }}
-      tool-ref: 61ac20cf78072fe6eacdd4633099e8f35e7541dc
+      tool-ref: 135b5f50c21ecbd10951dfa05e43de530d32cc81
 
   monitoring:
     name: monitoring configs, rules, dashboards, Grafana
@@ -63,7 +63,7 @@ jobs:
       checks: monitoring
       timeout-minutes: 10
       extra-args: ${{ needs.validate-args.outputs.args }}
-      tool-ref: 61ac20cf78072fe6eacdd4633099e8f35e7541dc
+      tool-ref: 135b5f50c21ecbd10951dfa05e43de530d32cc81
 
   declared-containers:
     name: declared containers
