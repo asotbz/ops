@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Shared Repo Tooling: reusable workflows from jbruns/homelab-components, pinned by commit; Renovate bumps them
-# together (repo-ci-vX.Y.Z). Each installs its tool from its own commit unless tool-ref says otherwise.
+# together (repo-ci-vX.Y.Z). Each installs its tool from its own commit.
 jobs:
   tool-tests:
     name: tool tests
@@ -44,39 +44,35 @@ jobs:
           args=$(python3 tools/validate/validate_args.py)
           echo "args=$args" >> "$GITHUB_OUTPUT"
 
-  # tool-ref: --legacy-stack and the monitoring fix (jbruns/homelab-components#17) until validate-v1.1.0 ships in
-  # a repo-ci release; then bump the pins and drop tool-ref.
   repo:
     name: secrets, env, compose, cloudflare, isolation
     needs: validate-args
-    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@d95baa6d827a8f59d96edc53e7950675969f6e43 # repo-ci-v1.0.2
     with:
       checks: secrets env compose cloudflare isolation
       extra-args: ${{ needs.validate-args.outputs.args }}
-      tool-ref: 135b5f50c21ecbd10951dfa05e43de530d32cc81
 
   monitoring:
     name: monitoring configs, rules, dashboards, Grafana
     needs: validate-args
-    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@d95baa6d827a8f59d96edc53e7950675969f6e43 # repo-ci-v1.0.2
     with:
       checks: monitoring
       timeout-minutes: 10
       extra-args: ${{ needs.validate-args.outputs.args }}
-      tool-ref: 135b5f50c21ecbd10951dfa05e43de530d32cc81
 
   declared-containers:
     name: declared containers
-    uses: jbruns/homelab-components/.github/workflows/repo-declared-containers.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+    uses: jbruns/homelab-components/.github/workflows/repo-declared-containers.yaml@d95baa6d827a8f59d96edc53e7950675969f6e43 # repo-ci-v1.0.2
 
   # The one-time full-history scan ran before adoption (asotbz/ops#308: 597 commits, no leaks).
   gitleaks:
     name: gitleaks
-    uses: jbruns/homelab-components/.github/workflows/repo-gitleaks.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+    uses: jbruns/homelab-components/.github/workflows/repo-gitleaks.yaml@d95baa6d827a8f59d96edc53e7950675969f6e43 # repo-ci-v1.0.2
 
   tooling:
     name: renovate config, actionlint
-    uses: jbruns/homelab-components/.github/workflows/repo-lint.yaml@b627c3e1015d20d0a6c6428f79c8d615bee3db04 # repo-ci-v1.0.1
+    uses: jbruns/homelab-components/.github/workflows/repo-lint.yaml@d95baa6d827a8f59d96edc53e7950675969f6e43 # repo-ci-v1.0.2
 
   # The single required check on main: fails unless every job above succeeded.
   validate:

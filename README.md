@@ -123,12 +123,11 @@ Run them locally from the repo root. They need Python 3.11+, [uv](https://docs.a
 the Compose plugin; none needs a key or Host access. Install the tools once, pinned:
 
 ```sh
-uv tool install "git+https://github.com/jbruns/homelab-components@135b5f50c21ecbd10951dfa05e43de530d32cc81#subdirectory=repo-tools/validate"
+uv tool install "git+https://github.com/jbruns/homelab-components@validate-v1.1.0#subdirectory=repo-tools/validate"
 uv tool install "git+https://github.com/jbruns/homelab-components@declared-containers-v1.0.1#subdirectory=repo-tools/declared-containers"
 ```
 
-The validate commit adds `--legacy-stack` (jbruns/homelab-components#17); once it is released as validate-v1.1.0,
-install that tag instead. Then:
+Then:
 
 ```sh
 tools/validate/homelab-validate             # every check (isolation compares with origin/main)
