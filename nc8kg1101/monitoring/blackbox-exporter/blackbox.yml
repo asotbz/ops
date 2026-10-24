@@ -1,10 +1,13 @@
 # Modules a Service picks with its `probe.module` label (default http_2xx), and that a
 # Dependency Probe names in `module` (prometheus/dependencies.yml).
+# Every module dials IPv4: Docker's networks here have no IPv6, and blackbox prefers ip6 by
+# default, so any target with an AAAA record (Cloudflare, Google) would fail to connect.
 modules:
   http_2xx:
     prober: http
     timeout: 8s
     http:
+      preferred_ip_protocol: ip4
       valid_status_codes: []  # 2xx
 
   # Edge reachability only: a 401 shows the router and its basic-auth middleware answer, not that
@@ -13,6 +16,7 @@ modules:
     prober: http
     timeout: 8s
     http:
+      preferred_ip_protocol: ip4
       valid_status_codes: [401]
 
   # Through the basic-auth wall to the Service itself, as the machine user `prometheus` (a Compose
@@ -22,6 +26,7 @@ modules:
     prober: http
     timeout: 8s
     http:
+      preferred_ip_protocol: ip4
       valid_status_codes: []  # 2xx
       basic_auth:
         username: prometheus
@@ -33,8 +38,11 @@ modules:
     prober: http
     timeout: 8s
     http:
+      preferred_ip_protocol: ip4
       valid_status_codes: [403]
 
   tcp_connect:
     prober: tcp
     timeout: 8s
+    tcp:
+      preferred_ip_protocol: ip4
