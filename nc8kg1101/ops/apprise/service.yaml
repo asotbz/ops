@@ -36,10 +36,6 @@ services:
       startup-order: "3"
       stack-back.volumes: "true"
       stack-back.volumes.include: "apprise_config"
-      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: ops
     networks:
       - default
       - backend

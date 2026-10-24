@@ -34,10 +34,6 @@ services:
       # Alert Tier (GLOSSARY.md): critical | warning | info
       tier: critical
       startup-order: "3"
-      # Legacy log collection (monitoring's promtail) until monitoring is cut over.
-      logging: promtail
-      logging_jobname: containerlogs
-      stackname: ops
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - stack-back_cache:/cache
