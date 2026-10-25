@@ -139,11 +139,13 @@ services:
       traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-provider: ""
       traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-app: ""
       traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-version: ""
-      ## Per client, on Client Paths (ADR 0005), which skip the IdP's check. depth 1 is the address
-      ## the entrypoint's forwarded headers end with: the client's.
+      ## Per client, on Client Paths (ADR 0005), which skip the IdP's check. Keyed on the connection
+      ## address (no ipStrategy): on a DNS-only hostname that is the client. An XFF ipStrategy
+      ## would put every direct client in one empty-key bucket, since the entrypoint strips their
+      ## untrusted X-Forwarded-For. Behind Cloudflare the key is the Cloudflare edge address, so
+      ## use this only on DNS-only hostnames.
       traefik.http.middlewares.client-ratelimit.ratelimit.average: 30
       traefik.http.middlewares.client-ratelimit.ratelimit.burst: 120
-      traefik.http.middlewares.client-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: 1
     ports:
       - 443:443
       - 80:80
