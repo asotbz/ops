@@ -135,7 +135,7 @@ services:
       - proxy
 
 volumes:
-  # Moved from xfer_mitmproxy_data at the cutover (asotbz/ops#301, ADR 0009).
+  # Moved from xfer_mitmproxy_data at the cutover (#301, ADR 0009).
   mitmproxy_data:
     name: edge_mitmproxy_data
     external: true

@@ -1,14 +1,14 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 services:
   fuzzbin:
-    # https://github.com/asotbz/Fuzzbin
+    # Source: the upstream project that publishes the image below.
     extends:
       file: ../../_baseline.yaml
       service: baseline
     image: ghcr.io/asotbz/fuzzbin:0.5.0@sha256:4fb5db76c78a153ac281b0220178470fa559f08f682538382157643b87d1cd15
     container_name: fuzzbin
     # The Music Videos Library's owner. Fuzzbin ran as root under Portainer; the cutover chowns
-    # fuzzbin_config and the Library files root wrote to this user (asotbz/ops#304).
+    # fuzzbin_config and the Library files root wrote to this user (#304).
     user: ${FUZZBIN_UID}:${FUZZBIN_GID}
     # Every request in and out goes through gluetun's namespace, so Fuzzbin downloads only through
     # the VPN. Traefik reaches it at gluetun's address on proxy.
@@ -44,7 +44,7 @@ services:
       # (gluetun/service.yaml).
     volumes:
       # Settings, its SQLite database and logs. Moved from Portainer's xfer_fuzzbin_config by hops
-      # volume move (asotbz/ops#304).
+      # volume move (#304).
       - config:/config
       # Organizer of Music Videos (ADR 0008): read-write to its own Library only. Media mounts
       # never create their source, so a missing folder fails the Deploy.

@@ -48,7 +48,7 @@ volumes:
     name: edge_crowdsec_log
     labels:
       homeops.regenerable: "crowdsec logs to stdout (log_media: stdout); nothing is kept here"
-  # Moved from common_crowdsec_* at the cutover (asotbz/ops#301, ADR 0009). data holds the LAPI
+  # Moved from common_crowdsec_* at the cutover (#301, ADR 0009). data holds the LAPI
   # database, with Traefik's bouncer registration; config holds acquis.yaml and the hub.
   crowdsec_config:
     name: edge_crowdsec_config

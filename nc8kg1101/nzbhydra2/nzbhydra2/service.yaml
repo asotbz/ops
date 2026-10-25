@@ -60,7 +60,7 @@ services:
     volumes:
       # Settings, its database and mitmproxy's CA (config/certificates), which it trusts:
       # https://github.com/theotherp/nzbhydra2/wiki/SSL-verification-errors. Moved from
-      # Portainer's xfer_nzbhydra2_config by hops volume move (asotbz/ops#304).
+      # Portainer's xfer_nzbhydra2_config by hops volume move (#304).
       - config:/config
     networks:
       - default

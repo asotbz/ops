@@ -1,5 +1,5 @@
 # DEPENDENCIES (GLOSSARY.md): one Dependency Probe per edge, dependent -> Dependency, for a
-# Dependency that no Probe of an Exposed Service already covers. None yet on nc8kg1101.
+# Dependency that no Probe of an Exposed Service already covers. None yet on the Host.
 # A template: dependencies-render fills in each $$NAME placeholder from its environment (service.yaml) and
 # writes the file Prometheus reads as file_sd (job `dependency` in prometheus.yml). A new placeholder
 # must also be added to that environment (homelab-validate env checks it); write a literal dollar sign

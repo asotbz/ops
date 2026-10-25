@@ -1,4 +1,4 @@
-"""Checks for host/: the startup-order unit nc8kg1101 runs and the release pin Renovate bumps."""
+"""Checks for host/: the startup-order unit the Host runs and the release pin Renovate bumps."""
 import json
 import re
 import shutil
@@ -12,7 +12,8 @@ REPO = Path(__file__).resolve().parents[3]
 PIN = REPO / "host" / "startup-order.pin"
 UNIT = REPO / "host" / "startup-order.service"
 SCRIPT = "/usr/local/bin/startup-order.sh"
-STACK_ROOT = REPO / "nc8kg1101"
+(HOST,) = yaml.safe_load((REPO / "hosts.yaml").read_text())["hosts"].values()
+STACK_ROOT = REPO / HOST["stack_root"]
 
 
 def js_regex(pattern):

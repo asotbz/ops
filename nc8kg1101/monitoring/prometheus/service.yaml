@@ -141,7 +141,7 @@ volumes:
     name: monitoring_dependencies_sd
     labels:
       homeops.regenerable: "dependencies-render rewrites it from dependencies.yml at each start"
-  # Created by the legacy monitoring group under the same name, kept at the cutover (asotbz/ops#302).
+  # Created by the legacy monitoring group under the same name, kept at the cutover (#302).
   prometheus_data:
     name: monitoring_prometheus_data
     external: true

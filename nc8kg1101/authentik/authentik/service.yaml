@@ -5,7 +5,7 @@
 # https://docs.goauthentik.io/install-config/install/docker-compose/
 #
 # No Docker socket: the worker only needs it for a Docker outpost integration, and this Host runs
-# no outposts besides the server's embedded one. Forward auth (asotbz/ops#289) will use that
+# no outposts besides the server's embedded one. Forward auth (#289) will use that
 # embedded outpost or a declared one, never one Authentik starts itself.
 # No /certs or /templates volumes: both were empty under Portainer. A custom template or a
 # certificate to discover would come back as a declared volume or bind mount.
@@ -99,7 +99,7 @@ services:
       - default
 
 volumes:
-  # Moved from Portainer's asot_authentik_media by hops volume move (asotbz/ops#303).
+  # Moved from Portainer's asot_authentik_media by hops volume move (#303).
   media:
     name: authentik_media
     external: true

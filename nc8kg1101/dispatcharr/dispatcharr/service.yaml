@@ -73,7 +73,7 @@ services:
       probe.url: https://dsp.${DOMAIN}/api/core/version/
     volumes:
       # Its Postgres and Redis data, settings, logos and recordings. Moved from Portainer's
-      # xfer_dispatcharr_data by hops volume move (asotbz/ops#304).
+      # xfer_dispatcharr_data by hops volume move (#304).
       - data:/data
     networks:
       # Routed by edge's Traefik (ADR 0002)

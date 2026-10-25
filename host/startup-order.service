@@ -1,4 +1,4 @@
-# Installed at /etc/systemd/system/startup-order.service on nc8kg1101 (host/README.md). Runs the
+# Installed at /etc/systemd/system/startup-order.service on the Host (host/README.md). Runs the
 # startup-order Custom Component pinned in host/startup-order.pin (ADR 0003).
 #
 # After=docker.service: systemd stops units in reverse order, so ExecStop runs while Docker is still up.

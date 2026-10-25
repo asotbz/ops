@@ -1,4 +1,4 @@
-# Routing by Tier (GLOSSARY.md), for nc8kg1101's own Prometheus (ADR 0011):
+# Routing by Tier (GLOSSARY.md), for the Host's own Prometheus (ADR 0011):
 #   critical -> the Page (Pushover), and also the Digest (Discord) for the record
 #   warning  -> the Digest, grouped per Stack, repeated every 12h
 #   info     -> never notifies

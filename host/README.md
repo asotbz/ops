@@ -1,11 +1,10 @@
 # host
 
-What runs on nc8kg1101 itself, outside Docker. doco-cd does not deploy any of it (it reads only
-`nc8kg1101/`); @jbruns installs it by hand with the runbook below.
+What runs on the Host itself, outside Docker. doco-cd does not deploy any of it (it reads only
+`nc8kg1101/`); the Operator installs it by hand with the runbook below.
 
-- `startup-order.pin`: the pinned release (tag and sha256) of the
-  [startup-order](https://github.com/jbruns/homelab-components/tree/main/components/startup-order)
-  Custom Component ([ADR 0003](../docs/adr/0003-startup-order-via-systemd-unit.md),
+- `startup-order.pin`: the pinned release (tag and sha256) of the startup-order
+  Custom Component, `components/startup-order` in the Repo Tooling repo ([ADR 0003](../docs/adr/0003-startup-order-via-systemd-unit.md),
   [ADR 0007](../docs/adr/0007-custom-components-from-homelab-components.md)). Its README covers configuration, exit
   status and logs.
 - `startup-order.service`: the systemd unit that runs it. Installed at `/etc/systemd/system/startup-order.service`;
@@ -13,7 +12,7 @@ What runs on nc8kg1101 itself, outside Docker. doco-cd does not deploy any of it
 
 ## How it runs
 
-nc8kg1101 is AlmaLinux 9 (systemd 252) with Docker Engine as `docker.service`. The unit is ordered after
+The Host is AlmaLinux 9 (systemd 252) with Docker Engine as `docker.service`. The unit is ordered after
 `docker.service` and only `Wants=` it, so:
 
 - At boot, once Docker is up, `ExecStart` runs `startup-order.sh start`, which leaves `run` in the background and
@@ -30,15 +29,16 @@ starts it again last.
 
 ## Install or upgrade startup-order
 
-@jbruns runs this as `doogie` (sudo) on nc8kg1101; the agent user can only run `docker`. Every step is safe to
+The Operator runs this with the Operator's sudo account on the Host; the agent user can only run `docker`. Every step is safe to
 re-run. To upgrade, merge the Renovate PR that bumps `startup-order.pin` (Renovate never automerges it) and repeat
 steps 1, 2 and 5; repeat step 3 too when the PR changed `startup-order.service`.
 
-1. From a checkout of `main` on your machine, copy the pin and the unit to the Host:
+1. From a checkout of `main` on your machine, copy the pin and the unit to the Host, with `<user>@<host>` the
+   Operator's sudo account on the Host:
 
    ```sh
-   scp host/startup-order.pin host/startup-order.service doogie@nc8kg1101.asot.bz:
-   ssh doogie@nc8kg1101.asot.bz
+   scp host/startup-order.pin host/startup-order.service <user>@<host>:
+   ssh <user>@<host>
    ```
 
 2. On the Host, download the pinned release and install it only if its sha256 matches:

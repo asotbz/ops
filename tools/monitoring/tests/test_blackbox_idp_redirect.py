@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-BLACKBOX = Path(__file__).resolve().parents[3] / "nc8kg1101" / "monitoring" / "blackbox-exporter" / "blackbox.yml"
+BLACKBOX = Path(__file__).resolve().parents[3] / "nc8kg1101/monitoring/blackbox-exporter/blackbox.yml"
 
 
 def location_regexp():
@@ -38,6 +38,7 @@ def test_accepts_the_idps_authorize_endpoint(location):
         "http://idp.asot.bz/application/o/authorize/?client_id=test",
         "https://idp.asot.bz/application/o/authorize/x?client_id=test",
         "https://evil.example/?u=https://idp.asot.bz/application/o/authorize/",
+        "https://xidp.asot.bz/application/o/authorize/?client_id=test",
     ],
 )
 def test_rejects_any_other_location(location):

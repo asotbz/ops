@@ -55,7 +55,7 @@ services:
       - default
 
 volumes:
-  # Created by the legacy monitoring group under the same name, kept at the cutover (asotbz/ops#302).
+  # Created by the legacy monitoring group under the same name, kept at the cutover (#302).
   alertmanager_data:
     name: monitoring_alertmanager_data
     external: true

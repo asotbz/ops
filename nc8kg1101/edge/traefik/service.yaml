@@ -213,7 +213,7 @@ services:
       - traefik_log:/var/log/traefik
 
 volumes:
-  # Moved from common_traefik_* at the cutover (asotbz/ops#301, ADR 0009).
+  # Moved from common_traefik_* at the cutover (#301, ADR 0009).
   # Read by CrowdSec too.
   traefik_log:
     name: edge_traefik_log

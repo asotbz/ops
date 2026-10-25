@@ -265,7 +265,7 @@ groups:
           summary: "Deploys of {{ $labels.deployment }} keep failing"
           description: "doco-cd failed to deploy {{ $labels.deployment }} {{ $value | humanize }} times in 10 minutes."
 
-      # Without polls, merged changes never reach the Host. Critical, as doco-cd is (asotbz/ops#302).
+      # Without polls, merged changes never reach the Host. Critical, as doco-cd is (#302).
       - alert: DeployPollFailing
         expr: sum(increase(doco_cd_poll_errors_total[15m])) >= 3
         labels:

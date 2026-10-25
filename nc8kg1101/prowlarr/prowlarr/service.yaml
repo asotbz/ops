@@ -53,7 +53,7 @@ services:
       probe.url: https://plr.${DOMAIN}/ping
     volumes:
       # Settings and its database. Moved from Portainer's xfer_prowlarr_config by hops volume move
-      # (asotbz/ops#304).
+      # (#304).
       - config:/config
       # mitmproxy's CA (edge), so Prowlarr trusts the forward proxy's certificates.
       - ./mitmproxy-ca-cert.pem:/etc/ssl/certs/mitmproxy-ca-cert.pem:ro

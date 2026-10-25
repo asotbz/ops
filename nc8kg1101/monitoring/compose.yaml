@@ -1,5 +1,5 @@
 # MONITORING STACK (deployed by doco-cd)
-# nc8kg1101's own telemetry (ADR 0011): Prometheus and Alertmanager, Loki fed by Alloy, the exporters,
+# The Host's own telemetry (ADR 0011): Prometheus and Alertmanager, Loki fed by Alloy, the exporters,
 # and blackbox-exporter for Probes. Every Service extends the Baseline (../_baseline.yaml).
 ## With thanks to https://github.com/ruanbekker/docker-monitoring-stack-gpnc
 

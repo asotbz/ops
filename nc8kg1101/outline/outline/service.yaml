@@ -87,7 +87,7 @@ services:
       probe.idp_auth: oidc
     volumes:
       # Uploads and attachments (FILE_STORAGE=local). Moved from Portainer's asot_outline_data by
-      # hops volume move (asotbz/ops#303).
+      # hops volume move (#303).
       - data:/var/lib/outline/data
     networks:
       - default

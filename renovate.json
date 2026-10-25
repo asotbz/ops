@@ -1,28 +1,28 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>jbruns/homelab-components//renovate/repo-default#repo-ci-v1.0.2"
+    "github>jbruns/homelab-components//renovate/repo-default#repo-ci-v1.1.0"
   ],
   "schedule": ["* 10-13 * * 5"],
   "packageRules": [
     {
-      "description": "The startup-order Custom Component nc8kg1101 runs (the preset already blocks automerge): after merging, install it on the Host",
+      "description": "The startup-order Custom Component the Host runs (the preset already blocks automerge): after merging, install it on the Host",
       "matchDatasources": ["github-release-attachments"],
       "matchPackageNames": ["jbruns/homelab-components"],
       "prBodyNotes": [
-        "After merging, install the new release on nc8kg1101: [runbook](https://github.com/asotbz/ops/blob/main/host/README.md#install-or-upgrade-startup-order)."
+        "After merging, install the new release on the Host: follow the runbook in `host/README.md` (Install or upgrade startup-order)."
       ]
     },
     {
-      "description": "The setup-agent-skills wrapper's own PR, apart from the repo-ci group the preset puts every homelab-components tag in",
+      "description": "The setup-agent-skills wrapper's own PR, apart from the repo-ci group the preset puts every Repo Tooling tag in",
       "matchFileNames": ["tools/agent-skills/setup-agent-skills"],
-      "groupName": "homelab-components agent-skills"
+      "groupName": "Repo Tooling agent-skills"
     }
   ],
   "customManagers": [
     {
       "customType": "regex",
-      "description": "startup-order release pinned for nc8kg1101: tag and the sha256 of its startup-order.sh asset",
+      "description": "startup-order release pinned for the Host: tag and the sha256 of its startup-order.sh asset",
       "managerFilePatterns": ["/^host/startup-order\\.pin$/"],
       "matchStrings": [
         "STARTUP_ORDER_TAG=(?<currentValue>\\S+)\\s+STARTUP_ORDER_SHA256=(?<currentDigest>[0-9a-f]{64})"
@@ -33,7 +33,7 @@
     },
     {
       "customType": "regex",
-      "description": "setup-agent-skills wrapper: shared Repo Tooling pinned by tag and commit (homelab-components repo-tools/agent-skills README)",
+      "description": "setup-agent-skills wrapper: shared Repo Tooling pinned by tag and commit (repo-tools/agent-skills README in the Repo Tooling repo)",
       "managerFilePatterns": ["/(^|/)tools/agent-skills/setup-agent-skills$/"],
       "matchStrings": [
         "tag=(?<currentValue>agent-skills-v\\S+)\\s+commit=(?<currentDigest>[0-9a-f]{40})"
