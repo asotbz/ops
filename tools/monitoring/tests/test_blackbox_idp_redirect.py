@@ -18,22 +18,15 @@ def location_regexp():
     return rule["regexp"]
 
 
-def idp_host():
-    """The IdP's host name, read from the regexp so no domain is written here."""
-    m = re.fullmatch(r"\^https://((?:[a-z0-9-]+\\\.)+[a-z]+)/application/o/authorize/\(\\\?\|\$\)", location_regexp())
-    assert m, "the regexp no longer has the expected shape; update this test with it"
-    return m[1].replace("\\.", ".")
-
-
 @pytest.mark.parametrize(
     "location",
     [
-        "https://{idp}/application/o/authorize/?client_id=abc&redirect_uri=https%3A%2F%2Fapp.example%2Fauth%2Foidc.callback",
-        "https://{idp}/application/o/authorize/",
+        "https://idp.asot.bz/application/o/authorize/?client_id=abc&redirect_uri=https%3A%2F%2Foln.asot.bz%2Fauth%2Foidc.callback",
+        "https://idp.asot.bz/application/o/authorize/",
     ],
 )
 def test_accepts_the_idps_authorize_endpoint(location):
-    assert re.search(location_regexp(), location.format(idp=idp_host()))
+    assert re.search(location_regexp(), location)
 
 
 @pytest.mark.parametrize(
@@ -41,12 +34,12 @@ def test_accepts_the_idps_authorize_endpoint(location):
     [
         "https://wrong.example/application/o/authorize/?client_id=test",
         "/login?next=/application/o/authorize/",
-        "https://{idp}.evil.example/application/o/authorize/?client_id=test",
-        "http://{idp}/application/o/authorize/?client_id=test",
-        "https://{idp}/application/o/authorize/x?client_id=test",
-        "https://evil.example/?u=https://{idp}/application/o/authorize/",
-        "https://x{idp}/application/o/authorize/?client_id=test",
+        "https://idp.asot.bz.evil.example/application/o/authorize/?client_id=test",
+        "http://idp.asot.bz/application/o/authorize/?client_id=test",
+        "https://idp.asot.bz/application/o/authorize/x?client_id=test",
+        "https://evil.example/?u=https://idp.asot.bz/application/o/authorize/",
+        "https://xidp.asot.bz/application/o/authorize/?client_id=test",
     ],
 )
 def test_rejects_any_other_location(location):
-    assert not re.search(location_regexp(), location.format(idp=idp_host()))
+    assert not re.search(location_regexp(), location)

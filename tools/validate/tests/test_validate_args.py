@@ -1,5 +1,6 @@
 """Tests for validate_args.py and the homelab-validate wrapper that uses it."""
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -7,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 TOOL_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_DIR))
@@ -118,3 +120,38 @@ def test_wrapper_passes_each_value_as_one_argument(tmp_path):
     assert r.stdout.splitlines() == [
         "--root", str(repo.resolve()), "--path", "loki=host-a/monitoring/loki", "--privacy-allow", "host-a/", "secrets",
     ]
+
+
+# The privacy check's rule (homelab-validate privacy): a denylisted match passes only when it lies wholly inside a
+# match of an allowlist pattern on the same line.
+STACK_ROOT = yaml.safe_load((TOOL_DIR.parents[1] / "hosts.yaml").read_text())["hosts"].popitem()[1]["stack_root"]
+
+
+def flagged(line):
+    allow = [re.compile(p) for p in validate_args.load_privacy_allow(TOOL_DIR / "privacy-allow")[1::2]]
+    spans = [m.span() for p in allow for m in p.finditer(line)]
+    hits = [m.span() for m in re.finditer(f"(?i){re.escape(STACK_ROOT)}", line)]
+    return any(not any(a <= s and e <= b for a, b in spans) for s, e in hits)
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["under `{root}/<stack>/compose.yaml`", "--path loki={root}/monitoring/loki", '"{root}/monitoring/prometheus"'],
+)
+def test_the_stack_root_as_a_repository_path_is_allowed(line):
+    assert not flagged(line.format(root=STACK_ROOT))
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "see http://{root}/status",
+        "see https://{root}/status",
+        "see https://{root}.example.org/status",
+        "ssh user@{root}/",
+        "under docs/{root}/",
+        "on {root} itself",
+    ],
+)
+def test_the_host_name_outside_a_repository_path_is_flagged(line):
+    assert flagged(line.format(root=STACK_ROOT))
