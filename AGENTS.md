@@ -31,8 +31,7 @@ CI (`.github/workflows/validate.yaml`) must pass before a PR merges; its `valida
 `main`. Run the same checks locally before opening a PR (README.md, [Checks](README.md#checks)):
 `tools/validate/homelab-validate`, `homelab-declared-containers --check` and `python3 -m pytest tools`.
 
-A legacy group's exception is its `--legacy-stack` line in `tools/validate/args`. Never add one; the cutover PR
-for that group removes it.
+`tools/validate/args` holds only `--path` lines. Never add a `--legacy-stack` (or any other exception) there.
 
 ### Secrets
 

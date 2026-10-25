@@ -25,7 +25,7 @@ jobs:
       - run: python3 -m pip install --quiet --requirement tools/requirements-test.txt
       - run: python3 -m pytest tools
 
-  # tools/validate/args: the legacy-stack exceptions and every input as an explicit --path.
+  # tools/validate/args: every input as an explicit --path.
   validate-args:
     name: validate args
     runs-on: ubuntu-24.04

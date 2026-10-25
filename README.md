@@ -35,17 +35,18 @@ There is one Stack per app, each with its own Datastores ([ADR 0004](docs/adr/00
 
 App Stacks are `authentik`, `outline`, `fuzzbin`, `ersatztv`, `dispatcharr`, `nzbhydra2` and `prowlarr`.
 
-### Cutover in progress
+### Cutover from Portainer
 
-nc8kg1101 still runs one umbrella group (`common`) in `nc8kg1101/common/docker-compose.yaml`, deployed by a Portainer agent. The groups were cut over to the layout above one PR per group:
+nc8kg1101 used to run four umbrella groups (`common`, `monitoring`, `asot`, `xfer`) in `docker-compose.yaml` files, deployed by a Portainer agent. They were cut over to the layout above one PR per group:
 
 1. doco-cd and the ops Platform Stack ([#300](https://github.com/asotbz/ops/issues/300))
 2. edge ([#301](https://github.com/asotbz/ops/issues/301))
 3. monitoring ([#302](https://github.com/asotbz/ops/issues/302))
 4. asot into authentik and outline ([#303](https://github.com/asotbz/ops/issues/303))
 5. xfer into one Stack per app ([#304](https://github.com/asotbz/ops/issues/304))
+6. the Portainer agent, the last of `common`, removed ([#305](https://github.com/asotbz/ops/issues/305))
 
-#300 moved stack-back out of `common` and Apprise out of `xfer` into `nc8kg1101/ops`. #301 moved Traefik, CrowdSec and nginx out of `common` and mitmproxy and openresty out of `xfer` into `nc8kg1101/edge`, which owns the `proxy` and `forward-proxy` networks ([ADR 0002](docs/adr/0002-role-based-networks-replace-whalewall.md)). Every Service Traefik routes to joins `proxy` whichever group it is in, and prowlarr and nzbhydra2 reach mitmproxy on `forward-proxy`; the groups kept `common_backend` among themselves until their own cutover. #302 moved the `monitoring` group into `nc8kg1101/monitoring`, which owns the `metrics` network, with Alloy in place of Promtail. #303 split the `asot` group into the `authentik` and `outline` Stacks, each with its own Postgres (moved by pg_dump/pg_restore); Outline keeps its Redis, Authentik no longer needs one, and Outline signs users in at the IdP. #304 split the `xfer` group into one Stack per app, each Library mounted by Role ([ADR 0008](docs/adr/0008-library-isolation-by-role.md)): Fuzzbin runs as the Music Videos Library's owner behind its gluetun sidecar, ErsatzTV reads every Library, and Dispatcharr reads ErsatzTV's channels through its public Client Path. Nothing joins `common_backend` any more but Apprise, which leaves it in its own PR. `common` now holds only the Portainer agent. Its container was started by hand, and nothing redeploys `common` any more. Each cutover applies the Baseline, the role-based networks and the volume naming rule, and removes the group from Portainer. The Portainer agent is then removed from the Host ([#305](https://github.com/asotbz/ops/issues/305)).
+#300 moved stack-back out of `common` and Apprise out of `xfer` into `nc8kg1101/ops`. #301 moved Traefik, CrowdSec and nginx out of `common` and mitmproxy and openresty out of `xfer` into `nc8kg1101/edge`, which owns the `proxy` and `forward-proxy` networks ([ADR 0002](docs/adr/0002-role-based-networks-replace-whalewall.md)). Every Service Traefik routes to joins `proxy` whichever group it is in, and prowlarr and nzbhydra2 reach mitmproxy on `forward-proxy`; the groups kept `common_backend` among themselves until their own cutover. #302 moved the `monitoring` group into `nc8kg1101/monitoring`, which owns the `metrics` network, with Alloy in place of Promtail. #303 split the `asot` group into the `authentik` and `outline` Stacks, each with its own Postgres (moved by pg_dump/pg_restore); Outline keeps its Redis, Authentik no longer needs one, and Outline signs users in at the IdP. #304 split the `xfer` group into one Stack per app, each Library mounted by Role ([ADR 0008](docs/adr/0008-library-isolation-by-role.md)): Fuzzbin runs as the Music Videos Library's owner behind its gluetun sidecar, ErsatzTV reads every Library, and Dispatcharr reads ErsatzTV's channels through its public Client Path. Apprise, the last Service on `common_backend`, left it in its own PR (#329). #305 removed the Portainer agent and `common_backend` with it. Each cutover applied the Baseline, the role-based networks and the volume naming rule, and removed the group from Portainer. The cutover is complete: doco-cd deploys every Stack, and nothing on the Host comes from Portainer.
 
 ## How a Deploy works
 
@@ -56,7 +57,7 @@ Once doco-cd lands ([ADR 0001](docs/adr/0001-doco-cd-deploys-stacks.md)):
 3. doco-cd, running on the Host in the ops Platform Stack, polls `main`. For every Stack that changed, it decrypts the Stack's SOPS files with the Host's age key and runs `docker compose up`.
 4. Deploy results go to the Digest through Apprise.
 
-doco-cd deploys only `nc8kg1101/<stack>/compose.yaml`. It never deploys or removes the legacy `docker-compose.yaml` groups, which Portainer or @jbruns still deploy until their cutover.
+doco-cd deploys only `nc8kg1101/<stack>/compose.yaml`. It never removes a container it did not deploy.
 
 Deleting a Stack folder removes the Stack from the Host but keeps its data volumes, which are `external` ([ADR 0009](docs/adr/0009-volumes-named-for-their-stack.md)). Runtime actions on the Host, such as a forced recreate, go through `hops` from the shared Repo Tooling, never by editing the Host by hand.
 
@@ -114,28 +115,23 @@ It needs the repo-root `.env`, the Host's private age key at `~/.config/sops/age
 2. Replace the placeholder notification URL in `nc8kg1101/ops/doco-cd/apprise_urls.sops.txt`, through a PR.
 3. Install the Host age key at `/etc/doco-cd/age.key`, checked by hash and never printed.
 4. Create the external volumes `ops_doco-cd_data` and `ops_stack-back_cache`, and the `metrics` network (owned by monitoring from #302).
-5. Remove xfer's old `apprise` container once Portainer has redeployed xfer.
+5. Remove xfer's old `apprise` container, if it is still there.
 6. Copy `xfer_apprise_config` into `ops_apprise_config`. The old volume stays as the Rollback Volume ([ADR 0009](docs/adr/0009-volumes-named-for-their-stack.md)).
-7. Redeploy `common` by hand from `~/ops`, which removes `common-backup` before the new stack-back starts. Avoid the 09:12 backup.
+7. Remove `common-backup`, if it is still there, before the new stack-back starts. Avoid the 09:12 backup.
 8. Run doco-cd once with `apply-self --bootstrap`. It deploys `nc8kg1101/ops`, including the long-lived doco-cd container, and exits.
-9. Verify that doco-cd, stack-back and Apprise are healthy and stack-back's schedule is set. Also check that Apprise is reachable from `common_backend` and that no legacy container was touched.
-10. Remove the old stack-back cache. The wizard then lists what to release a week later: the Rollback Volume and common's plaintext `stack-back.env`, both of which a rollback needs until then.
+9. Verify that doco-cd, stack-back and Apprise are healthy and stack-back's schedule is set. Also check that Apprise answers on `ops_default` and that no legacy container was touched.
+10. Remove the old stack-back cache. The wizard then lists what to release a week later: the Rollback Volume, if it is still there.
 
 How doco-cd finds Stacks: its `POLL_CONFIG` polls `https://github.com/asotbz/ops.git` on `main` with `target: nc8kg1101`, so it reads only `.doco-cd.nc8kg1101.yml`. That file sets:
 
-- `working_dir: nc8kg1101` and `compose_files: [compose.yaml]`, with auto-discovery at depth 1. Each `nc8kg1101/<stack>/compose.yaml` is a Stack. `nc4kg1201/` and the legacy `docker-compose.yaml` groups are never matched.
-- `delete: true`, which removes only projects that doco-cd itself deployed and labelled. The Portainer and hand-deployed groups are never removed.
+- `working_dir: nc8kg1101` and `compose_files: [compose.yaml]`, with auto-discovery at depth 1. Each `nc8kg1101/<stack>/compose.yaml` is a Stack. `nc4kg1201/` is never matched.
+- `delete: true`, which removes only projects that doco-cd itself deployed and labelled. A container started by hand is never removed.
 
-Another Host would get its own `.doco-cd.<host>.yml` and target. A cutover that adds `compose.yaml` to a legacy group folder hands that project to doco-cd on merge.
+Another Host would get its own `.doco-cd.<host>.yml` and target.
 
 To rotate the Host key: add the new recipient in `.sops.yaml` and run `sops updatekeys` through a PR. Then replace `/etc/doco-cd/age.key` (wizard stage 3 with `AGE_KEY_FILE`) and `sudo docker restart doco-cd`.
 
-If the bootstrap has to be rolled back:
-
-1. `sudo docker rm -f doco-cd stack-back apprise`.
-2. Revert #300 on `main`.
-3. Redeploy xfer in Portainer, which brings back `apprise` on `xfer_apprise_config`.
-4. Redeploy `common` by hand. It needs `~/ops/nc8kg1101/common/stack-back.env` again, from `sops -d nc8kg1101/common/stack-back.sops.env` (piped straight into the file, never printed).
+A failed re-run is fixed forward.
 
 ## Shared Repo Tooling
 
@@ -175,12 +171,10 @@ python3 -m pip install -r tools/requirements-test.txt && python3 -m pytest tools
 `tools/validate/homelab-validate` runs `homelab-validate` with the arguments in `tools/validate/args`, one option
 and its value per line, which CI passes too:
 
-- `--legacy-stack NAME` for each legacy group of the [cutover](#cutover-in-progress). Its `docker-compose.yaml`
-  files may stay, and inputs inside it (such as monitoring's configs) are skipped; every other rule still applies.
-  The check fails once the group has a `compose.yaml` or is gone, so each cutover PR removes its line. The list
-  only shrinks.
 - `--path NAME=PATH` for each component `homelab-validate` reads, so a missing one fails instead of being skipped.
   edge added `traefik`; monitoring added `prometheus`, `rule-tests`, `alertmanager`, `loki`, `alloy` and `blackbox`.
+
+`validate_args.py` refuses any other line. The cutover's `--legacy-stack` exceptions are gone, and none is added again.
 
 `declared_containers.prom` is generated from the Stacks and committed; regenerate it whenever a Stack's Services
 change. Prometheus reads it through node-exporter's textfile collector, mounted from the repo, and alerts when a
