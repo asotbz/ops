@@ -72,6 +72,9 @@ services:
       # Settings and its database. Moved from Portainer's xfer_ersatztv_config by hops volume move
       # (asotbz/ops#304).
       - config:/config
+      # Live HLS segments (ETV_TRANSCODE_FOLDER). The image has no /transcode to copy an owner from,
+      # so the Deploy that creates the volume leaves it root's: it needs a one-off chown to
+      # ERSATZTV_UID:ERSATZTV_GID, or channels fail to play (asotbz/ops#304 runbook).
       - transcode:/transcode
       # Media Server (ADR 0008): every Library it presents, read-only. Media mounts never create
       # their source, so a missing folder fails the Deploy instead of presenting an empty Library.
