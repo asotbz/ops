@@ -49,7 +49,7 @@ services:
         tag: "{{.Name}}"
 
 volumes:
-  # Created by the bootstrap wizard. Only a cache (restic rebuilds it from the repository), but external
+  # Created by hand at the bootstrap. Only a cache (restic rebuilds it from the repository), but external
   # so no Deploy creates or removes it.
   stack-back_cache:
     name: ops_stack-back_cache

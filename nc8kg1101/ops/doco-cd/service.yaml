@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 # doco-cd deploys every Stack under nc8kg1101/ from this repo (ADR 0001), this one included. Its deploy
-# config is .doco-cd.nc8kg1101.yml at the repo root. Bootstrapped once by scripts/bootstrap-nc8kg1101.sh;
-# after that it replaces itself when this file changes. Its Baseline items are inline: extending
+# config is .doco-cd.nc8kg1101.yml at the repo root. Bootstrapped once by hand (README.md: Bootstrapping
+# doco-cd); after that it replaces itself when this file changes. Its Baseline items are inline: extending
 # _baseline.yaml would race its own self-update.
 services:
   doco-cd:
@@ -68,14 +68,14 @@ services:
         tag: "{{.Name}}"
 
 volumes:
-  # Created by the bootstrap wizard; doco-cd's repo clones and deploy state. A self-update must never
+  # Created by hand at the bootstrap; doco-cd's repo clones and deploy state. A self-update must never
   # change this volume's config.
   doco-cd_data:
     name: ops_doco-cd_data
     external: true
 
 secrets:
-  # The Host age key: root only (0600 in a 0700 dir), installed by the bootstrap wizard; never in the repo.
+  # The Host age key: root only (0600 in a 0700 dir), installed by hand at the bootstrap; never in the repo.
   sops_age_key:
     file: /etc/doco-cd/age.key
   apprise_urls:

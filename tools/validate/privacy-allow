@@ -12,9 +12,8 @@
 (?<![\w@.:/-])nc8kg1101/
 # .env keys, keyed by Host.
 HOPS_NC8KG1101_
-# The Host's doco-cd deploy config, and its bootstrap wizard (since removed) as the ops Stack's comments cite it.
+# The Host's doco-cd deploy config.
 \.doco-cd\.nc8kg1101\.yml
-scripts/bootstrap-nc8kg1101\.sh
 # An ADR's file name, in links to it.
 0007-custom-components-from-homelab-components\.md
 # Test data may keep the IdP's real URL (tools/monitoring/tests/test_blackbox_idp_redirect.py): a quoted URL

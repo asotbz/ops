@@ -1,8 +1,7 @@
 # OPS STACK (deployed by doco-cd)
 # Host-wide tooling: doco-cd (deploys every Stack under nc8kg1101/, this one included), stack-back
-# (volume and database backups) and apprise (notifications). Bootstrapped once by
-# scripts/bootstrap-nc8kg1101.sh (README.md: Bootstrapping doco-cd); after that doco-cd deploys this Stack
-# from main. As doco-cd's Stack, every Service here carries the Baseline inline instead of extending
+# (volume and database backups) and apprise (notifications). Bootstrapped once by hand (README.md:
+# Bootstrapping doco-cd); after that doco-cd deploys this Stack from main. As doco-cd's Stack, every Service here carries the Baseline inline instead of extending
 # _baseline.yaml: a Deploy of the Baseline must never race doco-cd's own self-update.
 
 networks:
