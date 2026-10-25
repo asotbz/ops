@@ -276,7 +276,7 @@ groups:
           summary: doco-cd cannot poll the repository
           description: "{{ $value | humanize }} polls of the repository failed in 15 minutes."
 
-  # Indexer health from nzbhydra2's stats API (xfer/nzbhydra2-exporter). Warning, as xfer is.
+  # Indexer health from nzbhydra2's stats API (nzbhydra2-exporter). Warning, as its Stack is.
   - name: nzbhydra2
     rules:
       - alert: NzbhydraStatsDown
@@ -284,7 +284,7 @@ groups:
         for: 10m
         labels:
           tier: warning
-          stack: xfer
+          stack: nzbhydra2
         annotations:
           summary: nzbhydra2 indexer stats are unavailable
           description: "nzbhydra2-exporter cannot read nzbhydra2's stats API (or cannot be scraped) for 10 minutes."
@@ -295,7 +295,7 @@ groups:
         for: 5m
         labels:
           tier: warning
-          stack: xfer
+          stack: nzbhydra2
         annotations:
           summary: "nzbhydra2 disabled indexer {{ $labels.indexer }}"
           description: "{{ $labels.indexer }} is disabled by nzbhydra2. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
@@ -306,7 +306,7 @@ groups:
         for: 30m
         labels:
           tier: warning
-          stack: xfer
+          stack: nzbhydra2
         annotations:
           summary: "nzbhydra2 indexer {{ $labels.indexer }} has been backing off for 30 minutes"
           description: "{{ $labels.indexer }} is temporarily disabled after errors. Last error: {{ with printf `nzbhydra2_indexer_last_error_info{indexer=%q}` $labels.indexer | query }}{{ range . }}{{ .Labels.error }}{{ end }}{{ else }}none{{ end }}"
@@ -319,7 +319,7 @@ groups:
         for: 15m
         labels:
           tier: warning
-          stack: xfer
+          stack: nzbhydra2
         annotations:
           summary: "{{ $labels.indexer }} has used {{ $value | humanizePercentage }} of its {{ $labels.limit }} limit"
           description: "nzbhydra2 stops using {{ $labels.indexer }} when the daily {{ $labels.limit }} limit is reached."
@@ -329,7 +329,7 @@ groups:
         for: 1h
         labels:
           tier: warning
-          stack: xfer
+          stack: nzbhydra2
         annotations:
           summary: "{{ $labels.indexer }} VIP expires in {{ $value | humanizeDuration }}"
           description: "Renew the {{ $labels.indexer }} VIP membership."

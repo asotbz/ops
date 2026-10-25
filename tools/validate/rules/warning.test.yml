@@ -278,9 +278,9 @@ tests:
   - name: NzbhydraStatsDown fires on a failed scrape or a failed stats read and waits ten minutes
     interval: 1m
     input_series:
-      - series: up{job="nzbhydra2",stack="xfer",tier="warning"}
+      - series: up{job="nzbhydra2",stack="nzbhydra2",tier="warning"}
         values: 1x12 0x12
-      - series: nzbhydra2_up{job="nzbhydra2",stack="xfer",tier="warning"}
+      - series: nzbhydra2_up{job="nzbhydra2",stack="nzbhydra2",tier="warning"}
         values: 0x11 1
     promql_expr_test:
       - expr: &hydra sum by (alertname, tier, stack) (ALERTS{alertname="NzbhydraStatsDown",alertstate="firing"})
@@ -289,7 +289,7 @@ tests:
       - expr: *hydra
         eval_time: 10m
         exp_samples:
-          - labels: '{alertname="NzbhydraStatsDown",tier="warning",stack="xfer"}'
+          - labels: '{alertname="NzbhydraStatsDown",tier="warning",stack="nzbhydra2"}'
             value: 1
       - expr: *hydra
         eval_time: 12m
@@ -298,7 +298,7 @@ tests:
       - expr: *hydra
         eval_time: 24m
         exp_samples:
-          - labels: '{alertname="NzbhydraStatsDown",tier="warning",stack="xfer"}'
+          - labels: '{alertname="NzbhydraStatsDown",tier="warning",stack="nzbhydra2"}'
             value: 1
 
   - name: nzbhydra2 indexer alerts wait their for durations and name the indexer
@@ -328,7 +328,7 @@ tests:
       - expr: *disabled
         eval_time: 5m
         exp_samples:
-          - labels: '{alertname="NzbhydraIndexerDisabled",tier="warning",stack="xfer",indexer="alpha"}'
+          - labels: '{alertname="NzbhydraIndexerDisabled",tier="warning",stack="nzbhydra2",indexer="alpha"}'
             value: 1
       - expr: *disabled
         eval_time: 8m
@@ -339,7 +339,7 @@ tests:
       - expr: *backoff
         eval_time: 30m
         exp_samples:
-          - labels: '{alertname="NzbhydraIndexerBackingOff",tier="warning",stack="xfer",indexer="beta"}'
+          - labels: '{alertname="NzbhydraIndexerBackingOff",tier="warning",stack="nzbhydra2",indexer="beta"}'
             value: 1
       - expr: *backoff
         eval_time: 33m
@@ -350,7 +350,7 @@ tests:
       - expr: *limit
         eval_time: 15m
         exp_samples:
-          - labels: '{alertname="NzbhydraIndexerLimitNear",tier="warning",stack="xfer",indexer="gamma",limit="API hit"}'
+          - labels: '{alertname="NzbhydraIndexerLimitNear",tier="warning",stack="nzbhydra2",indexer="gamma",limit="API hit"}'
             value: 1
       - expr: *limit
         eval_time: 17m
@@ -361,7 +361,7 @@ tests:
       - expr: *vip
         eval_time: 60m
         exp_samples:
-          - labels: '{alertname="NzbhydraIndexerVipExpiring",tier="warning",stack="xfer",indexer="delta"}'
+          - labels: '{alertname="NzbhydraIndexerVipExpiring",tier="warning",stack="nzbhydra2",indexer="delta"}'
             value: 1
       - expr: *vip
         eval_time: 62m
@@ -378,7 +378,7 @@ tests:
       - alertname: NzbhydraIndexerDisabled
         eval_time: 5m
         exp_alerts:
-          - exp_labels: {tier: warning, stack: xfer, job: nzbhydra2, indexer: alpha, state: DISABLED_SYSTEM}
+          - exp_labels: {tier: warning, stack: nzbhydra2, job: nzbhydra2, indexer: alpha, state: DISABLED_SYSTEM}
             exp_annotations:
               summary: nzbhydra2 disabled indexer alpha
               description: "alpha is disabled by nzbhydra2. Last error: Bad API key"

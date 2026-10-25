@@ -1,0 +1,22 @@
+# NZBHYDRA2 STACK (deployed by doco-cd)
+# NZBHydra2, the Usenet indexer manager, and nzbhydra2-exporter, which reports its indexers' health
+# to Prometheus. Both extend the Baseline (../_baseline.yaml).
+
+# The exporter reads NZBHydra2 on the Stack's default network, nzbhydra2_default.
+networks:
+  # Traefik and the Exposed Services it routes to; owned by the edge Stack (ADR 0002).
+  proxy:
+    name: proxy
+    external: true
+  # mitmproxy, the forward proxy indexer requests go through; owned by the edge Stack (ADR 0002).
+  forward-proxy:
+    name: forward-proxy
+    external: true
+  # Prometheus and the exporters it scrapes; owned by the monitoring Stack (ADR 0002).
+  metrics:
+    name: metrics
+    external: true
+
+include:
+  - ./nzbhydra2/service.yaml
+  - ./nzbhydra2-exporter/service.yaml

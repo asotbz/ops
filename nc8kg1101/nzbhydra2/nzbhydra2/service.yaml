@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  nzbhydra2:
+    # https://github.com/linuxserver/docker-nzbhydra2
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: lscr.io/linuxserver/nzbhydra2:9.1.1@sha256:123782636d66dc299b3addb617fd720a55ac2f858fa8ca312892bf9176492d58
+    container_name: nzbhydra2
+    # Runs as the owner of nzbhydra2_config, so no caps. The LSIO image's s6 service always switches
+    # to its own user, which a non-root container cannot, so this skips s6 and starts the wrapper
+    # its service would. s6's init only chowns /config and seeds nzbhydra.yml, which the volume
+    # already holds; init reaps the wrapper's children and forwards stop signals.
+    user: ${NZBHYDRA2_UID}:${NZBHYDRA2_GID}
+    init: true
+    working_dir: /app/nzbhydra2
+    entrypoint: ["/usr/bin/python3", "nzbhydra2wrapperPy3.py", "--nobrowser", "--datafolder", "/config"]
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 594MiB (#304), a JVM. The Baseline's 1.5x until a 30-day
+          # peak exists to size it by.
+          memory: 1G
+    healthcheck:
+      # The login page: / and /actuator/health redirect to it.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:5076/login"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+      start_interval: 5s
+    environment:
+      - TZ=${TZ}
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "2"
+      stack-back.volumes: true
+      stack-back.volumes.include: "nzbhydra2_config"
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.nzbhydra2-http.rule: Host(`hyd.${DOMAIN}`)
+      traefik.http.routers.nzbhydra2-http.entrypoints: http
+      traefik.http.routers.nzbhydra2-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.nzbhydra2-https.rule: Host(`hyd.${DOMAIN}`)
+      traefik.http.routers.nzbhydra2-https.entrypoints: https
+      traefik.http.routers.nzbhydra2-https.tls: true
+      traefik.http.routers.nzbhydra2-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.nzbhydra2-https.service: nzbhydra2
+      traefik.http.routers.nzbhydra2-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.nzbhydra2.loadbalancer.server.port: 5076
+
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
+      probe.url: https://hyd.${DOMAIN}/login
+    volumes:
+      # Settings, its database and mitmproxy's CA (config/certificates), which it trusts:
+      # https://github.com/theotherp/nzbhydra2/wiki/SSL-verification-errors. Moved from
+      # Portainer's xfer_nzbhydra2_config by hops volume move (asotbz/ops#304).
+      - config:/config
+    networks:
+      - default
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+      # mitmproxy, the forward proxy it sends indexer requests through
+      - forward-proxy
+
+volumes:
+  config:
+    name: nzbhydra2_config
+    external: true

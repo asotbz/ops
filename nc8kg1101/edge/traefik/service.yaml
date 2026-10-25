@@ -123,6 +123,29 @@ services:
 
       ## Redirect to HTTPS
       traefik.http.middlewares.redirect-https.redirectScheme.scheme: https
+
+      ## On every router that skips forward auth (ADR 0005): removes the identity headers the IdP's
+      ## forward auth would hand a Service, so a client can never supply them itself. An empty value
+      ## removes the header.
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-username: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-groups: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-entitlements: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-email: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-name: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-uid: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-jwt: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-jwks: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-outpost: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-provider: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-app: ""
+      traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-version: ""
+      ## Per client, on Client Paths (ADR 0005), which skip the IdP's check. Keyed on the connection
+      ## address (no ipStrategy): on a DNS-only hostname that is the client. An XFF ipStrategy
+      ## would put every direct client in one empty-key bucket, since the entrypoint strips their
+      ## untrusted X-Forwarded-For. Behind Cloudflare the key is the Cloudflare edge address, so
+      ## use this only on DNS-only hostnames.
+      traefik.http.middlewares.client-ratelimit.ratelimit.average: 30
+      traefik.http.middlewares.client-ratelimit.ratelimit.burst: 120
     ports:
       - 443:443
       - 80:80
