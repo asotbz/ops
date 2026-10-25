@@ -44,8 +44,8 @@ services:
         # Stored encrypted in repo
         x-sops: true
       - alertmanager_data:/alertmanager
-    # Page (Pushover), Digest (Discord) and Heartbeat (healthchecks.io); see config.yml.
-    # scripts/monitoring-secrets.sh writes them.
+    # Page (Pushover), Digest (Discord) and Heartbeat (healthchecks.io); see config.yml. Set or
+    # rotate one with `sops <file>`, through a PR.
     secrets:
       - pushover_user_key
       - pushover_token
