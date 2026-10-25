@@ -12,6 +12,14 @@
       "enabled": false
     },
     {
+      "description": "The startup-order Custom Component nc8kg1101 runs (the preset already blocks automerge): after merging, install it on the Host",
+      "matchDatasources": ["github-release-attachments"],
+      "matchPackageNames": ["jbruns/homelab-components"],
+      "prBodyNotes": [
+        "After merging, install the new release on nc8kg1101: [runbook](https://github.com/asotbz/ops/blob/main/host/README.md#install-or-upgrade-startup-order)."
+      ]
+    },
+    {
       "description": "The setup-agent-skills wrapper's own PR, apart from the repo-ci group the preset puts every homelab-components tag in",
       "matchFileNames": ["tools/agent-skills/setup-agent-skills"],
       "groupName": "homelab-components agent-skills"
@@ -31,6 +39,17 @@
       "depNameTemplate": "portainer-ee",
       "datasourceTemplate": "custom.portainer-lts",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "startup-order release pinned for nc8kg1101: tag and the sha256 of its startup-order.sh asset",
+      "managerFilePatterns": ["/^host/startup-order\\.pin$/"],
+      "matchStrings": [
+        "STARTUP_ORDER_TAG=(?<currentValue>\\S+)\\s+STARTUP_ORDER_SHA256=(?<currentDigest>[0-9a-f]{64})"
+      ],
+      "depNameTemplate": "jbruns/homelab-components",
+      "datasourceTemplate": "github-release-attachments",
+      "versioningTemplate": "regex:^startup-order-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
     },
     {
       "customType": "regex",

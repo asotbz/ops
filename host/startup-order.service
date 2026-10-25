@@ -1,0 +1,30 @@
+# Installed at /etc/systemd/system/startup-order.service on nc8kg1101 (host/README.md). Runs the
+# startup-order Custom Component pinned in host/startup-order.pin (ADR 0003).
+#
+# After=docker.service: systemd stops units in reverse order, so ExecStop runs while Docker is still up.
+# Wants=, never Requires=, BindsTo= or PartOf=: those would also stop this unit whenever docker.service is
+# restarted (a package update), and `stop` would leave every container stopped with nothing to start it.
+[Unit]
+Description=Stop and start containers in order by their startup-order label
+Documentation=https://github.com/asotbz/ops/blob/main/host/README.md
+Documentation=https://github.com/jbruns/homelab-components/tree/main/components/startup-order
+Wants=docker.service
+After=docker.service
+
+[Service]
+# `start` hands off to a background `run` and returns at once, so boot does not wait on the levels.
+# The unit then stays active, which is what makes systemd run ExecStop at shutdown.
+Type=oneshot
+RemainAfterExit=yes
+# /var/lib/startup-order, the script's default STARTUP_ORDER_DIR: the state file, locks, shutdown.log and last.log.
+StateDirectory=startup-order
+ExecStart=/usr/local/bin/startup-order.sh start
+ExecStop=/usr/local/bin/startup-order.sh stop
+TimeoutStartSec=60
+# `stop` waits up to 30s for a boot run to give up, then runs one `docker stop` per level, each as long as
+# the longest stop_grace_period at that level: 10s at levels 0, 2 and 3, 60s at level 1 (the Postgres
+# Datastores). That is 120s at worst; keep this at least 180s, and raise it if a Service's grace period grows.
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target
