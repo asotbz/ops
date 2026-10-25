@@ -21,7 +21,7 @@ services:
     environment:
       TZ: ${TZ}
       APPRISE_WORKER_COUNT: 1
-    # Stateful: /config holds the saved asotdiscord config. The image's other VOLUME paths are scratch,
+    # Stateful: /config holds the saved Discord config. The image's other VOLUME paths are scratch,
     # so tmpfs rather than anonymous volumes (Baseline item: anonymous-volumes).
     volumes:
       - apprise_config:/config
@@ -50,7 +50,7 @@ services:
         tag: "{{.Name}}"
 
 volumes:
-  # Moved from xfer_apprise_config by the bootstrap wizard (hops volume move).
+  # Created by hand at the bootstrap (README.md: Bootstrapping doco-cd), from xfer_apprise_config.
   apprise_config:
     name: ops_apprise_config
     external: true
