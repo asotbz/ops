@@ -5,7 +5,7 @@
 #   Watchdog -> the Heartbeat (healthchecks.io); silence there means the alert pipeline is broken
 # An alert without a tier label falls through to the Digest so it can't go unseen.
 # Credentials are SOPS-encrypted in the repo (<name>.sops.txt) and mounted as Compose secrets;
-# scripts/monitoring-secrets.sh writes them.
+# set or rotate one with `sops <file>`, through a PR.
 global:
   resolve_timeout: 5m
 

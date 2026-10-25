@@ -45,9 +45,9 @@ services:
       # Why Protected (ADR 0005, decided by audience): the wiki holds private notes for invited
       # people only, who already have IdP accounts. The IdP being down blocks new sign-ins only;
       # Outline's own sessions keep working, and its Probe does not depend on the IdP.
-      # The client is the IdP's `outline` application (scripts/outline-oidc.sh). Endpoints are set
-      # one by one rather than through OIDC_ISSUER_URL: discovery runs at startup and exits when
-      # the IdP is down, which would make Outline crash-loop at boot (ADR 0003).
+      # The client is the IdP's `outline` application. Endpoints are set one by one rather than
+      # through OIDC_ISSUER_URL: discovery runs at startup and exits when the IdP is down, which
+      # would make Outline crash-loop at boot (ADR 0003).
       OIDC_AUTH_URI: https://idp.${DOMAIN}/application/o/authorize/
       OIDC_TOKEN_URI: https://idp.${DOMAIN}/application/o/token/
       OIDC_USERINFO_URI: https://idp.${DOMAIN}/application/o/userinfo/
