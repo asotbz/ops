@@ -14,11 +14,6 @@ networks:
   metrics:
     name: metrics
     external: true
-  # Transitional (asotbz/ops#304): the legacy common Stack's shared network, where xfer's Services reach
-  # apprise:8000. Dropped once xfer is cut over.
-  backend:
-    name: common_backend
-    external: true
 
 include:
   - ./apprise/service.yaml
