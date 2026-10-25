@@ -16,9 +16,8 @@ After=docker.service
 # The unit then stays active, which is what makes systemd run ExecStop at shutdown.
 Type=oneshot
 RemainAfterExit=yes
-# /var/lib/startup-order: the state file, locks, shutdown.log and last.log.
+# /var/lib/startup-order, the script's default STARTUP_ORDER_DIR: the state file, locks, shutdown.log and last.log.
 StateDirectory=startup-order
-Environment=STARTUP_ORDER_DIR=/var/lib/startup-order
 ExecStart=/usr/local/bin/startup-order.sh start
 ExecStop=/usr/local/bin/startup-order.sh stop
 TimeoutStartSec=60

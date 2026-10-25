@@ -74,7 +74,7 @@ steps 1, 2 and 5; repeat step 3 too when the PR changed `startup-order.service`.
    ```sh
    sudo systemd-analyze verify /etc/systemd/system/startup-order.service   # prints nothing
    systemctl is-enabled startup-order.service                              # enabled
-   systemctl show startup-order.service -p Wants -p After -p TimeoutStopUSec # docker.service; 5min
+   systemctl show startup-order.service -p Wants -p After | grep -c docker.service   # 2
    ```
 
 5. Check what the next boot would do; this changes nothing:
@@ -84,8 +84,8 @@ steps 1, 2 and 5; repeat step 3 too when the PR changed `startup-order.service`.
    ```
 
    It lists the levels 2 and 3 containers it would restart and every container by level. A container that shows
-   up at level 2 without a label is unlabelled; give it one in its `service.yaml` (or `startup-order=skip` for an
-   ad-hoc `docker run`).
+   up at level 2 without a label is unlabelled; give it one in its `service.yaml`, or label a container started by
+   hand with `docker run` `startup-order=skip`.
 
 ## Check it after a reboot
 
@@ -100,11 +100,13 @@ sudo cat /var/lib/startup-order/shutdown.log       # after an ordered shutdown: 
 
 A `WARNING level N not ready` means that level timed out and the next one started anyway. If `run` failed it keeps
 `state` and exits 1, and what it recorded may still be stopped: find the cause in `last.log`, then run it again in
-the foreground with `sudo /usr/local/bin/startup-order.sh run`.
+the foreground with `sudo /usr/local/bin/startup-order.sh run`. Like a boot, that run stops and restarts every
+running container at levels 2 and 3 first, so they go down for about a minute.
 
 ## Roll back
 
-Never `systemctl stop` or `disable --now` the unit to remove it: its stop step stops every container.
+Never `systemctl stop` or `disable --now` the unit to remove it: its stop step stops every container. The first
+line only acts when a run left containers stopped; it then restarts levels 2 and 3 too, as above.
 
 ```sh
 sudo test -e /var/lib/startup-order/state && sudo /usr/local/bin/startup-order.sh run   # start anything left stopped
