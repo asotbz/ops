@@ -36,6 +36,12 @@ services:
       - WIREGUARD_PRIVATE_KEY=${GLUETUN_WG_PRIVATE_KEY}
       - SERVER_COUNTRIES=${GLUETUN_COUNTRIES}
       - SERVER_CITIES=${GLUETUN_CITIES}
+      # gluetun writes its public IP to a file and chowns it to PUID:PGID. Without DAC_OVERRIDE it cannot
+      # write into the image's /tmp/gluetun (created 0644), and without CHOWN it cannot hand the file to
+      # 1000, so keep the file in /tmp and owned by root.
+      - PUBLICIP_FILE=/tmp/gluetun-ip
+      - PUID=0
+      - PGID=0
     labels:
       # Alert Tier (GLOSSARY.md): critical | warning | info
       tier: warning
