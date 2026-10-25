@@ -179,3 +179,14 @@ and its value per line, which CI passes too:
 `declared_containers.prom` is generated from the Stacks and committed; regenerate it whenever a Stack's Services
 change. Prometheus reads it through node-exporter's textfile collector, mounted from the repo, and alerts when a
 declared container is missing.
+
+A gitleaks pre-commit hook (`.pre-commit-config.yaml`) scans each commit's staged changes and stops a secret
+before it is committed; Renovate's shared preset bumps its pin. Install it once per clone:
+
+```sh
+pip install pre-commit && pre-commit install
+pre-commit run gitleaks --all-files         # scans staged changes only, not the whole tree
+```
+
+For a whole-tree scan, install the gitleaks binary and run `gitleaks dir --redact .`. CI's gitleaks job scans the
+PR's commits.
