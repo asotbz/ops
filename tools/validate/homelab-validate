@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""homelab-validate with this repo's arguments from tools/validate/args, each line one option and its value.
+"""homelab-validate with this repo's arguments from tools/validate/args, each line one option and its value, and
+the privacy allowlist from tools/validate/privacy-allow, one regex per line.
 
 Usage: tools/validate/homelab-validate [homelab-validate args...] [check...]
 """
@@ -12,7 +13,7 @@ sys.path.insert(0, str(here))
 import validate_args  # noqa: E402
 
 try:
-    args = validate_args.load(here / "args")
+    args = validate_args.load_all(here / "args")
 except (OSError, validate_args.ArgsError) as exc:
     sys.exit(f"tools/validate/homelab-validate: {exc}")
 os.execvp("homelab-validate", ["homelab-validate", "--root", str(here.parents[1]), *args, *sys.argv[1:]])

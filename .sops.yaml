@@ -1,6 +1,6 @@
 # https://getsops.io/docs/#using-sopsyaml-conf-to-select-kms-pgp-and-age-for-new-files
 creation_rules:
-  # nc8kg1101: the Host key (held by doco-cd on the Host) and @jbruns' editing key.
+  # The Host's stack root: the Host Key (held by doco-cd on the Host) and the Operator Key.
   - path_regex: ^nc8kg1101/
     age: >-
       age1zuj5rfeejm3j4jhf5ama25uxzj06a7clxd0u4qvn24cu6d8h4dhs27267v,

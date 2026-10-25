@@ -3,8 +3,8 @@
 #
 # --path NAME=PATH: a homelab-validate input, passed explicitly so a missing one fails instead of being skipped.
 #   When a PR adds a component homelab-validate reads (traefik, prometheus, rule-tests, alertmanager, loki,
-#   alloy, grafana, ...), add its --path in the same PR. Names:
-#   https://github.com/jbruns/homelab-components/blob/validate-v1.1.0/repo-tools/validate/README.md#inputs
+#   alloy, grafana, ...), add its --path in the same PR. Names: the Inputs table of repo-tools/validate/README.md
+#   in the Repo Tooling repo, at validate-v1.2.0.
 --path traefik=nc8kg1101/edge/traefik/service.yaml
 --path prometheus=nc8kg1101/monitoring/prometheus
 --path rule-tests=tools/validate/rules

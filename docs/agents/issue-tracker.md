@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and specs live in GitHub Issues for `asotbz/ops`. Use the `gh` CLI; it infers the repository from the clone's remote.
+Issues and specs live in this repo's GitHub Issues. Use the `gh` CLI; it infers the repository from the clone's remote.
 
 ## Conventions
 
@@ -29,7 +29,7 @@ For `/wayfinder`, the map is one issue with child issues as tickets.
 
 - Map: label `wayfinder:map`; body holds Notes, Decisions-so-far, and Fog.
 - Child: link as a GitHub sub-issue using `gh api`. If unavailable, use a task list in the map and `Part of #<map>` in the child. Label `wayfinder:<type>` (`research`, `prototype`, `grilling`, or `task`).
-- Blocking: use native issue dependencies: `gh api --method POST repos/asotbz/ops/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`. Obtain the database ID with `gh api repos/asotbz/ops/issues/<number> --jq .id`. If dependencies are unavailable, put `Blocked by: #<number>, #<number>` at the top of the child body.
+- Blocking: use native issue dependencies: `gh api --method POST repos/{owner}/{repo}/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`. Obtain the database ID with `gh api repos/{owner}/{repo}/issues/<number> --jq .id` (`gh` fills in `{owner}/{repo}` from the clone's remote). If dependencies are unavailable, put `Blocked by: #<number>, #<number>` at the top of the child body.
 - Frontier: inspect the map's open children in map order; choose the first with no assignee and no open blockers. Native `issue_dependencies_summary.blocked_by` counts open blockers; for fallback links, check each blocker's state.
 - Claim: `gh issue edit <number> --add-assignee @me`, the session's first write.
 - Resolve: comment with the answer, close the child, then append a gist and link to the map's Decisions-so-far.

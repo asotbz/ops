@@ -16,7 +16,7 @@ import validate_args  # noqa: E402
 BAD_LINES = [
     "--legacy-stack common",
     "--legacy-volume common_data",
-    "--path prometheus=nc8kg1101/monitoring/prometheus --help",
+    "--path prometheus=host-a/monitoring/prometheus --help",
     "--path prometheus=--help",
     "--path prometheus",
     "--path prometheus=",
@@ -26,21 +26,36 @@ BAD_LINES = [
 ]
 
 
-def write(tmp_path, *lines):
-    f = tmp_path / "args"
+def write(tmp_path, *lines, name="args"):
+    f = tmp_path / name
     f.write_text("# comment\n\n" + "".join(f"{line}\n" for line in lines))
     return f
 
 
 def test_each_line_is_one_option_and_its_value(tmp_path):
-    f = write(tmp_path, "--path loki=nc8kg1101/monitoring/loki", "--path traefik=nc8kg1101/edge/traefik/service.yaml")
+    f = write(tmp_path, "--path loki=host-a/monitoring/loki", "--path traefik=host-a/edge/traefik/service.yaml")
     assert validate_args.load(f) == [
-        "--path", "loki=nc8kg1101/monitoring/loki", "--path", "traefik=nc8kg1101/edge/traefik/service.yaml",
+        "--path", "loki=host-a/monitoring/loki", "--path", "traefik=host-a/edge/traefik/service.yaml",
     ]
 
 
-def test_the_repo_file_is_valid():
-    validate_args.load(TOOL_DIR / "args")
+def test_the_repo_files_are_valid():
+    validate_args.load_all(TOOL_DIR / "args")
+
+
+def test_each_privacy_allow_line_is_one_regex(tmp_path):
+    f = write(tmp_path, r"host-a/", r"\.deploy\.host-a\.yml", name="privacy-allow")
+    assert validate_args.load_privacy_allow(f) == ["--privacy-allow", "host-a/", "--privacy-allow", r"\.deploy\.host-a\.yml"]
+
+
+@pytest.mark.parametrize(
+    ("lines", "error"),
+    [(("(unclosed",), "line 3: not a valid regex"), ((" host-a/",), "line 3: leading"),
+     (("host-a/", "host-a/"), "line 4: given twice")],
+)
+def test_a_bad_privacy_allow_line_is_refused(tmp_path, lines, error):
+    with pytest.raises(validate_args.ArgsError, match=error):
+        validate_args.load_privacy_allow(write(tmp_path, *lines, name="privacy-allow"))
 
 
 @pytest.mark.parametrize("line", BAD_LINES)
@@ -59,10 +74,12 @@ def test_a_repeated_entry_is_refused(tmp_path, lines):
 
 
 def test_ci_output_round_trips_through_shlex_split(tmp_path):
-    f = write(tmp_path, "--path loki=nc8kg1101/monitoring/loki", "--path prometheus=nc8kg1101/monitoring/prometheus")
+    f = write(tmp_path, "--path loki=host-a/monitoring/loki", "--path prometheus=host-a/monitoring/prometheus")
+    write(tmp_path, r"(?<![\w@.-])host-a/", r"git\+https://\S+ 'x' \$", name="privacy-allow")
     out = subprocess.run([sys.executable, TOOL_DIR / "validate_args.py", f], capture_output=True, text=True,
                          check=True).stdout
-    assert shlex.split(out) == validate_args.load(f)
+    assert shlex.split(out) == validate_args.load_all(f)
+    assert shlex.split(out)[-2:] == ["--privacy-allow", r"git\+https://\S+ 'x' \$"]
 
 
 @pytest.mark.parametrize("line", BAD_LINES)
@@ -78,6 +95,7 @@ def wrapper_repo(tmp_path, stub_script, *lines):
     for name in ("homelab-validate", "validate_args.py"):
         shutil.copy2(TOOL_DIR / name, repo / "tools/validate" / name)
     write(repo / "tools/validate", *lines)
+    write(repo / "tools/validate", "host-a/", name="privacy-allow")
     stub = tmp_path / "bin"
     stub.mkdir()
     (stub / "homelab-validate").write_text(stub_script)
@@ -94,9 +112,9 @@ def test_wrapper_fails_on_a_bad_line_without_running_homelab_validate(tmp_path, 
 
 
 def test_wrapper_passes_each_value_as_one_argument(tmp_path):
-    repo, env = wrapper_repo(tmp_path, '#!/bin/sh\nprintf "%s\\n" "$@"\n', "--path loki=nc8kg1101/monitoring/loki")
+    repo, env = wrapper_repo(tmp_path, '#!/bin/sh\nprintf "%s\\n" "$@"\n', "--path loki=host-a/monitoring/loki")
     r = subprocess.run([repo / "tools/validate/homelab-validate", "secrets"], capture_output=True, text=True,
                        env=env, check=True)
     assert r.stdout.splitlines() == [
-        "--root", str(repo.resolve()), "--path", "loki=nc8kg1101/monitoring/loki", "secrets",
+        "--root", str(repo.resolve()), "--path", "loki=host-a/monitoring/loki", "--privacy-allow", "host-a/", "secrets",
     ]

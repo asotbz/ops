@@ -1,12 +1,16 @@
 # ops
 
-The self-hosted Services running on nc8kg1101, and how they are deployed, ordered, watched, and alerted on.
+The self-hosted Services running on the Host, and how they are deployed, ordered, watched, and alerted on.
 
 ## Topology
 
 **Host**:
-nc8kg1101, the single plain Linux machine whose Services this repo manages. Its filesystems are not ZFS.
-_Avoid_: Server, box, node
+The single plain Linux machine whose Services this repo manages, declared in the repo's Host list. Its filesystems are not ZFS.
+_Avoid_: Server, box, node, its hostname
+
+**Operator**:
+The person who administers the Host and edits the repo's secrets; the only one with a sudo account on the Host.
+_Avoid_: Admin, owner, a personal or account name
 
 **Stack**:
 The unit of deployment: one or more Services plus the Datastores they need, deployed, isolated, and backed up together (e.g. authentik, outline, fuzzbin, edge).
@@ -100,6 +104,14 @@ _Avoid_: Ad-hoc, orphan, leftover
 **Rollback Volume**:
 The pre-change copy of a volume, kept with the change it serves and a release date, and released once the change is verified. It is never a Backup.
 _Avoid_: .bak, safety copy, old volume
+
+**Host Key**:
+The age key that decrypts one Host's secrets, held only by that Host's deployer and offline by the Operator; never shared with another Host.
+_Avoid_: Shared key, deploy key, SOPS key
+
+**Operator Key**:
+The Operator's own age key for editing secrets; one per Operator across every repo, and never held by a Host.
+_Avoid_: Editing key, personal key, admin key
 
 ## Reliability
 

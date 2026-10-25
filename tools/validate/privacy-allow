@@ -1,0 +1,20 @@
+# Load-bearing identifiers the privacy check may find in prose, one Python regex per line. Prose names roles, not
+# repositories, people, logins or hostnames (docs/adr/0013-prose-names-roles-not-names.md); a match the check
+# reports passes only when it lies wholly inside a match of one of these. tools/validate/homelab-validate and CI
+# (.github/workflows/validate.yaml) pass each as --privacy-allow through validate_args.py.
+#
+# Keep each one narrow: a path, a key prefix, a file name or a pinned install URL. Never a bare hostname, login
+# or name. The denylist itself is never committed (the PRIVACY_DENYLIST secret).
+#
+# The stack root as a path.
+(?<![\w@.-])nc8kg1101/
+# .env keys, keyed by Host.
+HOPS_NC8KG1101_
+# The Host's doco-cd deploy config, and its bootstrap wizard (since removed) as the ops Stack's comments cite it.
+\.doco-cd\.nc8kg1101\.yml
+scripts/bootstrap-nc8kg1101\.sh
+# An ADR's file name, in links to it.
+0007-custom-components-from-homelab-components\.md
+# Pinned installs of the shared Repo Tooling and its release assets.
+git\+https://github\.com/jbruns/homelab-components@[\w.-]+#subdirectory=[\w/-]+
+https://github\.com/jbruns/homelab-components/releases/download/\$STARTUP_ORDER_TAG/startup-order\.sh

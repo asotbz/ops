@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-PROMETHEUS_DIR = Path(__file__).resolve().parents[3] / "nc8kg1101" / "monitoring" / "prometheus"
+PROMETHEUS_DIR = Path(__file__).resolve().parents[3] / "nc8kg1101/monitoring/prometheus"
 
 
 def service():

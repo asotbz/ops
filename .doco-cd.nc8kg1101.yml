@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=https://doco.cd/v0.128/schemas/deploy.schema.json
-# nc8kg1101's doco-cd reads only this file: its POLL_CONFIG sets `target: nc8kg1101`, and doco-cd
-# then looks for .doco-cd.nc8kg1101.yml at the repo root. Another Host's doco-cd sets its own target
+# The Host's doco-cd reads only this file: its POLL_CONFIG sets `target` to the Host's name, and doco-cd
+# then looks for .doco-cd.<target>.yml at the repo root. Another Host's doco-cd sets its own target
 # and reads its own file, so no Host ever deploys another Host's folder.
 #
-# doco-cd deploys every Stack it finds at nc8kg1101/<stack>/compose.yaml; the folder name is the
+# doco-cd deploys every Stack it finds at <stack root>/<stack>/compose.yaml; the folder name is the
 # Compose project name. delete only removes projects doco-cd itself labelled, so it never touches a
 # container started by hand or by another tool.
 #

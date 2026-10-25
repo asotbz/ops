@@ -2,8 +2,8 @@
 
 This repo pins the agent skills it uses in `.agent-skills.lock`. `tools/agent-skills/setup-agent-skills` installs
 them into the gitignored `.agents/skills/`. The wrapper runs `setup-agent-skills`, shared Repo Tooling from
-jbruns/homelab-components, with `uvx`, pinned by commit
-([README](https://github.com/jbruns/homelab-components/blob/agent-skills-v1.0.0/repo-tools/agent-skills/README.md)).
+the Repo Tooling repo, with `uvx`, pinned by commit (its README is `repo-tools/agent-skills/README.md` there, at
+the wrapper's `tag`).
 It is local tooling only: no Host access, Docker or secrets.
 
 ## Install and check
