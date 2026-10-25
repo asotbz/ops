@@ -350,7 +350,7 @@ step "volume ops_doco-cd_data: doco-cd's clones and deploy state"
 step "volume ops_stack-back_cache: stack-back's restic cache"
 step "network metrics: owned by the monitoring Stack (ADR 0002), created here until monitoring is cut over (#302)."
 note "It carries Compose's labels for monitoring's network key, so monitoring adopts it then."
-note "The backup network is the ops Stack's own; Compose creates it. common_backend exists already."
+note "The backup network is the ops Stack's own; Compose creates it."
 missing_volumes=()
 for v in ops_doco-cd_data ops_stack-back_cache; do exists volume "$v" || missing_volumes+=("$v"); done
 have_network=no
@@ -365,16 +365,12 @@ elif confirm "Create the missing ones?"; then
 else
   die "the bootstrap fails without them; re-run when ready"
 fi
-exists network common_backend || die "common_backend is missing; is common up?"
 pause
 
 # ── 5 ─────────────────────────────────────────────────────────────────────
 stage "Retire xfer's apprise"
 say "#300 moved apprise from the xfer Stack to ops, under the same container name. The old one must be"
 say "gone before ops starts the new one. xfer's Services lose notifications until stage 8: keep going."
-step "Portainer → Stacks → xfer: check it redeployed from main at or after #300 (Pull and redeploy if not,"
-step "with Prune services on)."
-pause "Press Enter once xfer has redeployed"
 old=$(agent "sudo -n docker ps -a --filter name=^apprise\$ --format '{{.Label \"com.docker.compose.project\"}} {{.State}}'")
 if [[ -z "$old" ]]; then
   ok "no apprise container left"
@@ -412,19 +408,16 @@ pause
 
 # ── 7 ─────────────────────────────────────────────────────────────────────
 stage "Retire common's stack-back (common-backup)"
-say "#300 moved stack-back from common to ops. Redeploy common by hand from main so common-backup is"
-say "removed before the ops Stack's stack-back starts: two would both run the daily backup."
+say "#300 moved stack-back from common to ops. common-backup must be gone before the ops Stack's"
+say "stack-back starts: two would both run the daily backup."
 say "Both schedules are 09:12 Host time; don't run this stage around then."
 note "Host time now: $(agent date +%H:%M)"
 if ! exists container common-backup; then
   ok "common-backup is already gone"
 else
-  say "First a dry run, in $OPERATOR's ~/ops checkout after git pull:"
-  operator 'cd ~/ops && git pull -q --ff-only && cd nc8kg1101/common && sudo docker compose up -d --remove-orphans --dry-run'
-  note "Expect only common-backup to be removed; anything else listed is drift from main and changes too."
-  confirm "Redeploy common for real (removes common-backup)?" \
+  confirm "Stop and remove common-backup?" \
     || die "the ops Stack's stack-back must not run beside common-backup; re-run when ready"
-  operator 'cd ~/ops/nc8kg1101/common && sudo docker compose up -d --remove-orphans'
+  operator 'sudo docker rm -f common-backup >/dev/null'
   ! exists container common-backup || die "common-backup is still there"
   ok "common-backup removed"
 fi
@@ -481,12 +474,12 @@ say "stack-back's schedule:"
 agent "sudo -n docker exec stack-back crontab -l" || failed=1
 wait_healthy apprise || failed=1
 APPRISE_IMAGE=$(image apprise)
-code=$(agent "sudo -n docker run --rm --pull never --network common_backend --entrypoint curl $APPRISE_IMAGE \
+code=$(agent "sudo -n docker run --rm --pull never --network ops_default --entrypoint curl $APPRISE_IMAGE \
   -s -o /dev/null -w '%{http_code}' http://apprise:8000/json/urls/asotdiscord" || true)
 if [[ "$code" == 200 ]]; then
-  ok "xfer's Services reach apprise:8000 on common_backend, and it holds the asotdiscord config"
+  ok "apprise:8000 answers on ops_default, and it holds the asotdiscord config"
 else
-  warn "GET apprise:8000/json/urls/asotdiscord from common_backend returned ${code:-nothing}"
+  warn "GET apprise:8000/json/urls/asotdiscord from ops_default returned ${code:-nothing}"
   failed=1
 fi
 owners=$(agent "sudo -n docker ps -a --filter label=cd.doco.deployment.name \
@@ -504,7 +497,7 @@ else
   warn "legacy containers changed during the bootstrap (diff above)"
   failed=1
 fi
-(( failed == 0 )) || die "verification failed; see above. Rollback: README.md#bootstrapping-doco-cd"
+(( failed == 0 )) || die "verification failed; see above"
 pause
 
 # ── 10 ────────────────────────────────────────────────────────────────────
@@ -516,10 +509,11 @@ if exists volume common_backup_cache \
   operator "sudo docker volume rm common_backup_cache >/dev/null"
   ok "removed"
 fi
-say "Release on $RELEASE, once notifications and backups still work (until then a rollback needs both):"
-step "Rollback Volume $OLD_APPRISE_VOLUME: ssh -t $OPERATOR sudo docker volume rm $OLD_APPRISE_VOLUME"
-step "common's plaintext env: ssh $OPERATOR 'shred -u ~/ops/nc8kg1101/common/stack-back.env'"
-SKIPPED+=("on $RELEASE: remove $OLD_APPRISE_VOLUME, shred ~/ops/nc8kg1101/common/stack-back.env, tick #300's PR")
+if exists volume "$OLD_APPRISE_VOLUME"; then
+  say "Release on $RELEASE, once notifications still work:"
+  step "Rollback Volume $OLD_APPRISE_VOLUME: ssh -t $OPERATOR sudo docker volume rm $OLD_APPRISE_VOLUME"
+  SKIPPED+=("on $RELEASE: remove $OLD_APPRISE_VOLUME")
+fi
 pause
 
 finish

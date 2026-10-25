@@ -170,10 +170,9 @@ groups:
           description: "The kernel killed a process in {{ $labels.name }} for exceeding its memory limit in the last 15 minutes."
 
       # A container with a health check that has not reported healthy for 5 minutes, at its own
-      # Tier (container-health-exporter copies the `tier` label). The only down alert for a Service
-      # nc8kg1101/ does not declare yet (the legacy groups), such as Outline's Datastores. A declared
-      # Service that stopped is ContainerDown's, and an Exposed Service's ProbeFailed explains it
-      # better; both inhibit this (alertmanager).
+      # Tier (container-health-exporter copies the `tier` label). The only down alert for a container
+      # nc8kg1101/ does not declare. A declared Service that stopped is ContainerDown's, and an
+      # Exposed Service's ProbeFailed explains it better; both inhibit this (alertmanager).
       - alert: ContainerUnhealthy
         expr: label_replace(container_healthy{tier=~"critical|warning", stack!=""}, "name", "$1", "container", "(.+)") == 0
         for: 5m

@@ -1,15 +1,10 @@
 # This repo's homelab-validate arguments, one option and its value per line. tools/validate/homelab-validate
 # and CI (.github/workflows/validate.yaml) read them through validate_args.py, which refuses any other line.
 #
-# --legacy-stack NAME: a group under nc8kg1101/ still deployed from docker-compose.yaml files until its cutover
-#   (README.md, Cutover in progress). homelab-validate lets its docker-compose.yaml files be and skips the
-#   inputs that lie in it. Every other rule still applies there. It fails once the group has a compose.yaml or is
-#   gone, so each cutover PR removes its line here.
 # --path NAME=PATH: a homelab-validate input, passed explicitly so a missing one fails instead of being skipped.
-#   When a cutover adds a component homelab-validate reads (edge: traefik; monitoring: prometheus, rule-tests,
-#   alertmanager, loki, alloy, grafana, ...), add its --path in the same PR. Names:
+#   When a PR adds a component homelab-validate reads (traefik, prometheus, rule-tests, alertmanager, loki,
+#   alloy, grafana, ...), add its --path in the same PR. Names:
 #   https://github.com/jbruns/homelab-components/blob/validate-v1.1.0/repo-tools/validate/README.md#inputs
---legacy-stack common
 --path traefik=nc8kg1101/edge/traefik/service.yaml
 --path prometheus=nc8kg1101/monitoring/prometheus
 --path rule-tests=tools/validate/rules

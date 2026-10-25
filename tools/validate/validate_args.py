@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 
 ARGS = Path(__file__).resolve().parent / "args"
-LEGACY_STACK = re.compile(r"--legacy-stack ([a-z0-9][a-z0-9-]*)")
 PATH = re.compile(r"--path (([a-z][a-z0-9-]*)=([^\s-][^\s]*))")
 
 
@@ -20,11 +19,9 @@ class ArgsError(ValueError):
 
 def parse(path: Path, n: int, line: str) -> tuple[str, str, str]:
     """One line as (option, value, key): key names what may appear only once."""
-    if m := LEGACY_STACK.fullmatch(line):
-        return "--legacy-stack", m[1], f"--legacy-stack {m[1]}"
     if m := PATH.fullmatch(line):
         return "--path", m[1], f"--path {m[2]}"
-    raise ArgsError(f"{path}: line {n}: want '--legacy-stack NAME' or '--path NAME=PATH': {line!r}")
+    raise ArgsError(f"{path}: line {n}: want '--path NAME=PATH': {line!r}")
 
 
 def load(path: Path = ARGS) -> list[str]:

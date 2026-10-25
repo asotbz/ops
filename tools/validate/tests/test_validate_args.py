@@ -14,19 +14,15 @@ sys.path.insert(0, str(TOOL_DIR))
 import validate_args  # noqa: E402
 
 BAD_LINES = [
-    "--legacy-stack common --help",
-    "--legacy-stack",
-    "--legacy-stack ../common",
-    "--legacy-stack Common",
-    "--legacy-stack  common",
+    "--legacy-stack common",
     "--legacy-volume common_data",
     "--path prometheus=nc8kg1101/monitoring/prometheus --help",
     "--path prometheus=--help",
     "--path prometheus",
     "--path prometheus=",
     "--path prometheus=a\tb",
-    "legacy-stack common",
-    "common",
+    "path prometheus=a",
+    "prometheus",
 ]
 
 
@@ -37,9 +33,9 @@ def write(tmp_path, *lines):
 
 
 def test_each_line_is_one_option_and_its_value(tmp_path):
-    f = write(tmp_path, "--legacy-stack common", "--path traefik=nc8kg1101/edge/traefik/service.yaml")
+    f = write(tmp_path, "--path loki=nc8kg1101/monitoring/loki", "--path traefik=nc8kg1101/edge/traefik/service.yaml")
     assert validate_args.load(f) == [
-        "--legacy-stack", "common", "--path", "traefik=nc8kg1101/edge/traefik/service.yaml",
+        "--path", "loki=nc8kg1101/monitoring/loki", "--path", "traefik=nc8kg1101/edge/traefik/service.yaml",
     ]
 
 
@@ -55,7 +51,7 @@ def test_a_bad_line_is_refused(tmp_path, line):
 
 @pytest.mark.parametrize(
     "lines",
-    [("--legacy-stack common", "--legacy-stack common"), ("--path prometheus=a", "--path prometheus=b")],
+    [("--path prometheus=a", "--path prometheus=a"), ("--path prometheus=a", "--path prometheus=b")],
 )
 def test_a_repeated_entry_is_refused(tmp_path, lines):
     with pytest.raises(validate_args.ArgsError, match="line 4: .* given twice"):
@@ -63,7 +59,7 @@ def test_a_repeated_entry_is_refused(tmp_path, lines):
 
 
 def test_ci_output_round_trips_through_shlex_split(tmp_path):
-    f = write(tmp_path, "--legacy-stack xfer", "--path prometheus=nc8kg1101/monitoring/prometheus")
+    f = write(tmp_path, "--path loki=nc8kg1101/monitoring/loki", "--path prometheus=nc8kg1101/monitoring/prometheus")
     out = subprocess.run([sys.executable, TOOL_DIR / "validate_args.py", f], capture_output=True, text=True,
                          check=True).stdout
     assert shlex.split(out) == validate_args.load(f)
@@ -98,7 +94,9 @@ def test_wrapper_fails_on_a_bad_line_without_running_homelab_validate(tmp_path, 
 
 
 def test_wrapper_passes_each_value_as_one_argument(tmp_path):
-    repo, env = wrapper_repo(tmp_path, '#!/bin/sh\nprintf "%s\\n" "$@"\n', "--legacy-stack common")
+    repo, env = wrapper_repo(tmp_path, '#!/bin/sh\nprintf "%s\\n" "$@"\n', "--path loki=nc8kg1101/monitoring/loki")
     r = subprocess.run([repo / "tools/validate/homelab-validate", "secrets"], capture_output=True, text=True,
                        env=env, check=True)
-    assert r.stdout.splitlines() == ["--root", str(repo.resolve()), "--legacy-stack", "common", "secrets"]
+    assert r.stdout.splitlines() == [
+        "--root", str(repo.resolve()), "--path", "loki=nc8kg1101/monitoring/loki", "secrets",
+    ]
