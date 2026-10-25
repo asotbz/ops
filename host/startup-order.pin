@@ -1,0 +1,5 @@
+# The startup-order release nc8kg1101 runs (jbruns/homelab-components, ADR 0003 and 0007). Install and upgrade:
+# host/README.md. Renovate bumps both values together (customManagers in renovate.json); the sha256 is the
+# release asset's.
+STARTUP_ORDER_TAG=startup-order-v1.0.0
+STARTUP_ORDER_SHA256=94fc9431e76f498212b65a55c43e3270b5e4fbde55fb579958c718279c6080d7

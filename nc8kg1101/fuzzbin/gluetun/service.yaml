@@ -45,7 +45,9 @@ services:
     labels:
       # Alert Tier (GLOSSARY.md): critical | warning | info
       tier: warning
-      startup-order: "2"
+      # A level below Fuzzbin: Fuzzbin joins this container's network namespace, and Docker refuses
+      # to start it while gluetun is stopped (ADR 0003).
+      startup-order: "1"
       # Fuzzbin's routers and Probe, on the container that holds its network namespace: Prometheus'
       # docker_sd finds no target for a container in another's namespace, and homelab-validate
       # wants a router's Probe on the same Service. Hence the gluetun-* router names.
