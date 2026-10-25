@@ -9,6 +9,7 @@ homeops_container_declared{stack="edge",service="mitmproxy",name="mitmproxy",tie
 homeops_container_declared{stack="edge",service="nginx",name="nginx",tier="critical"} 1
 homeops_container_declared{stack="edge",service="openresty",name="openresty",tier="critical"} 1
 homeops_container_declared{stack="edge",service="traefik",name="traefik",tier="critical"} 1
+homeops_container_declared{stack="edge",service="traefik-logrotate",name="traefik-logrotate",tier="info"} 1
 homeops_container_declared{stack="ersatztv",service="ersatztv",name="ersatztv",tier="warning"} 1
 homeops_container_declared{stack="fuzzbin",service="fuzzbin",name="fuzzbin",tier="warning"} 1
 homeops_container_declared{stack="fuzzbin",service="gluetun",name="gluetun",tier="warning"} 1

@@ -168,6 +168,50 @@ services:
       # Prometheus scrapes traefik:8082
       metrics: {}
 
+  traefik-logrotate:
+    # Rotates Traefik's access log daily at 00:00 UTC, keeping two old files. Copy-then-truncate
+    # keeps Traefik and CrowdSec on the same open file; CrowdSec reads only access.log and follows
+    # the truncation.
+    # https://hub.docker.com/_/busybox
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: busybox:1.38@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e
+    container_name: traefik-logrotate
+    user: ${COMMON_UID}:${COMMON_GID}
+    deploy:
+      resources:
+        limits:
+          # A shell loop with a few MB working set
+          memory: 32M
+    network_mode: none
+    working_dir: /var/log/traefik
+    command:
+      - sh
+      - -c
+      - |
+        touch /tmp/rotated
+        while :; do
+          now=$$(date +%s)
+          sleep $$(( (now / 86400 + 1) * 86400 - now ))
+          [ -f access.log.1 ] && mv -f access.log.1 access.log.2
+          cp -p access.log access.log.1 && : > access.log && touch /tmp/rotated
+        done
+    # Unhealthy once a daily rotation is missed (marker older than 25h).
+    healthcheck:
+      test: ["CMD-SHELL", "find /tmp/rotated -mmin -1500 | grep -q ."]
+      interval: 5m
+      timeout: 5s
+      retries: 2
+      start_period: 30s
+      start_interval: 5s
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: info
+      startup-order: "3"
+    volumes:
+      - traefik_log:/var/log/traefik
+
 volumes:
   # Moved from common_traefik_* at the cutover (asotbz/ops#301, ADR 0009).
   # Read by CrowdSec too.
