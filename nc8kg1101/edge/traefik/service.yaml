@@ -139,8 +139,8 @@ services:
       traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-provider: ""
       traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-app: ""
       traefik.http.middlewares.strip-idp-headers.headers.customRequestHeaders.X-authentik-meta-version: ""
-      ## Per client, on Client Paths (ADR 0005), where the Service's own sign-in, if any, takes the
-      ## guessing. depth 1 is the address the entrypoint's forwarded headers end with: the client's.
+      ## Per client, on Client Paths (ADR 0005), which skip the IdP's check. depth 1 is the address
+      ## the entrypoint's forwarded headers end with: the client's.
       traefik.http.middlewares.client-ratelimit.ratelimit.average: 30
       traefik.http.middlewares.client-ratelimit.ratelimit.burst: 120
       traefik.http.middlewares.client-ratelimit.ratelimit.sourcecriterion.ipstrategy.depth: 1

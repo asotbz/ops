@@ -50,8 +50,9 @@ services:
       traefik.http.routers.dispatcharr-http.middlewares: redirect-https
 
       # Direct https requests to the service, checking with crowdsec first, then strip the PSK
-      # prefix. The unprefixed playlist, guide and HDHomeRun paths match no router, so Traefik
-      # answers 404: players reach them only under /${DISPATCHARR_PSK}/.
+      # prefix. The unprefixed playlist, guide and HDHomeRun paths fall through to edge's nginx
+      # catch-all instead: players reach them only under /${DISPATCHARR_PSK}/. Exact paths, as the
+      # denypaths router under Portainer matched.
       traefik.http.routers.dispatcharr-https.rule: Host(`dsp.${DOMAIN}`) && !(Path(`/hdhr`) || Path(`/output/epg`) || Path(`/output/m3u`))
       traefik.http.routers.dispatcharr-https.entrypoints: https
       traefik.http.routers.dispatcharr-https.tls: true
