@@ -1,7 +1,7 @@
 # EDGE STACK (deployed by doco-cd)
 # Ingress: Traefik (ports 80/443), the CrowdSec engine behind its bouncer, nginx for error pages and
-# the catch-all route, and mitmproxy with its openresty sidecar, the forward proxy xfer's indexer
-# managers send their requests through. Every Service extends the Baseline (../_baseline.yaml).
+# the catch-all route, and mitmproxy with its openresty sidecar, the forward proxy the prowlarr and
+# nzbhydra2 Stacks send their indexer requests through. Every Service extends the Baseline (../_baseline.yaml).
 
 networks:
   # Traefik and the Exposed Services it routes to; owned here (ADR 0002). Traefik only routes over
@@ -15,8 +15,8 @@ networks:
           # Dynamic addresses come from the upper half only, so Traefik's static 172.30.0.10 can
           # never be handed to another container.
           ip_range: 172.30.0.128/25
-  # mitmproxy and the Services that send their requests through it (xfer's prowlarr and
-  # nzbhydra2). Owned here so xfer can come up without edge's internals (ADR 0002); not `proxy`,
+  # mitmproxy and the Services that send their requests through it (prowlarr and nzbhydra2).
+  # Owned here so their Stacks can come up without edge's internals (ADR 0002); not `proxy`,
   # which must never become a general network between Services.
   forward-proxy:
     name: forward-proxy

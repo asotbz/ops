@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  ersatztv:
+    # https://github.com/ErsatzTV/ErsatzTV
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: ghcr.io/ersatztv/legacy:v26.6.0@sha256:5fdd4e1d819416934f9090b322f055fa41284ce69b9dae9dedeb13feda453f00
+    container_name: ersatztv
+    # The owner of the files in ersatztv_config, carried over from Portainer.
+    user: ${ERSATZTV_UID}:${ERSATZTV_GID}
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 2107MiB (#304), with ffmpeg transcodes in this container.
+          # The Baseline's 1.5x until a 30-day peak exists to size it by.
+          memory: 3200M
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8409/api/version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+      start_interval: 5s
+    environment:
+      - TZ=${TZ}
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "2"
+      stack-back.volumes: true
+      stack-back.volumes.include: "ersatztv_config"
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.ersatztv-http.rule: Host(`etv.${DOMAIN}`)
+      traefik.http.routers.ersatztv-http.entrypoints: http
+      traefik.http.routers.ersatztv-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first, then basic auth:
+      # ErsatzTV has no sign-in of its own.
+      traefik.http.routers.ersatztv-https.rule: Host(`etv.${DOMAIN}`)
+      traefik.http.routers.ersatztv-https.entrypoints: https
+      traefik.http.routers.ersatztv-https.tls: true
+      traefik.http.routers.ersatztv-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.ersatztv-https.service: ersatztv
+      traefik.http.routers.ersatztv-https.middlewares: ersatztv-chain
+
+      # Client Path (GLOSSARY.md, ADR 0005): IPTV players and Dispatcharr read the channels, guide
+      # and streams under /iptv without basic auth, behind crowdsec and a per-client rate limit.
+      traefik.http.routers.ersatztv-client-iptv.rule: Host(`etv.${DOMAIN}`) && PathPrefix(`/iptv`)
+      traefik.http.routers.ersatztv-client-iptv.entrypoints: https
+      traefik.http.routers.ersatztv-client-iptv.tls: true
+      traefik.http.routers.ersatztv-client-iptv.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.ersatztv-client-iptv.service: ersatztv
+      traefik.http.routers.ersatztv-client-iptv.middlewares: crowdsec-bouncer,client-ratelimit,strip-idp-headers
+
+      # Basic auth middleware
+      traefik.http.middlewares.ersatztv-auth.basicauth.users: ${ERSATZTV_USERNAME}:${ERSATZTV_PASSWORD_HASH}
+
+      # Chain middlewares including basic auth
+      traefik.http.middlewares.ersatztv-chain.chain.middlewares: crowdsec-bouncer,ersatztv-auth
+
+      traefik.http.services.ersatztv.loadbalancer.server.port: 8409
+
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml.
+      # The channel list, through the Client Path: the UI answers 401 from Traefik even with
+      # ErsatzTV down.
+      probe.url: https://etv.${DOMAIN}/iptv/channels.m3u
+    volumes:
+      # Settings and its database. Moved from Portainer's xfer_ersatztv_config by hops volume move
+      # (asotbz/ops#304).
+      - config:/config
+      - transcode:/transcode
+      # Media Server (ADR 0008): every Library it presents, read-only. Media mounts never create
+      # their source, so a missing folder fails the Deploy instead of presenting an empty Library.
+      - type: bind
+        source: /var/media/music_videos
+        target: /data/music_videos
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/media/other_videos
+        target: /data/other_videos
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/media/tv
+        target: /data/tv
+        read_only: true
+        bind:
+          create_host_path: false
+    networks:
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+
+volumes:
+  config:
+    name: ersatztv_config
+    external: true
+  transcode:
+    name: ersatztv_transcode
+    labels:
+      homeops.regenerable: "HLS segments of the channels being watched; ErsatzTV rewrites them on the next request"

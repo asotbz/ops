@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 services:
-  # Forward proxy for xfer's indexer managers (prowlarr, nzbhydra2), which trust its CA. Its addon
+  # Forward proxy for the indexer managers (prowlarr, nzbhydra2), which trust its CA. Its addon
   # rewrites every URL in an XML response to point at openresty, so clients fetch through orx.
   mitmproxy:
     extends:

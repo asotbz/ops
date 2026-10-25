@@ -1,0 +1,15 @@
+# PROWLARR STACK (deployed by doco-cd)
+# Prowlarr, the indexer manager. It extends the Baseline (../_baseline.yaml).
+
+networks:
+  # Traefik and the Exposed Services it routes to; owned by the edge Stack (ADR 0002).
+  proxy:
+    name: proxy
+    external: true
+  # mitmproxy, the forward proxy indexer requests go through; owned by the edge Stack (ADR 0002).
+  forward-proxy:
+    name: forward-proxy
+    external: true
+
+include:
+  - ./prowlarr/service.yaml

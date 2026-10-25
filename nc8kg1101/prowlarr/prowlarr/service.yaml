@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  prowlarr:
+    # https://github.com/home-operations/containers/tree/main/apps/prowlarr
+    # https://github.com/Prowlarr/Prowlarr
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: ghcr.io/home-operations/prowlarr:2.5.1@sha256:5014bec2085b72759570ae958cdee251956c059bf82ca6244a3ce99e1c327a12
+    container_name: prowlarr
+    # The owner of the files in prowlarr_config, carried over from Portainer.
+    user: ${PROWLARR_UID}:${PROWLARR_GID}
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 230MiB (#304). Above the Baseline's 1.5x until a 30-day peak
+          # exists to size it by.
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:9696/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    environment:
+      - TZ=${TZ}
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "2"
+      stack-back.volumes: true
+      stack-back.volumes.include: "prowlarr_config"
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.prowlarr-http.rule: Host(`plr.${DOMAIN}`)
+      traefik.http.routers.prowlarr-http.entrypoints: http
+      traefik.http.routers.prowlarr-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.prowlarr-https.rule: Host(`plr.${DOMAIN}`)
+      traefik.http.routers.prowlarr-https.entrypoints: https
+      traefik.http.routers.prowlarr-https.tls: true
+      traefik.http.routers.prowlarr-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.prowlarr-https.service: prowlarr
+      traefik.http.routers.prowlarr-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.prowlarr.loadbalancer.server.port: 9696
+
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
+      probe.url: https://plr.${DOMAIN}/ping
+    volumes:
+      # Settings and its database. Moved from Portainer's xfer_prowlarr_config by hops volume move
+      # (asotbz/ops#304).
+      - config:/config
+      # mitmproxy's CA (edge), so Prowlarr trusts the forward proxy's certificates.
+      - ./mitmproxy-ca-cert.pem:/etc/ssl/certs/mitmproxy-ca-cert.pem:ro
+    networks:
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+      # mitmproxy, the forward proxy it sends indexer requests through
+      - forward-proxy
+
+volumes:
+  config:
+    name: prowlarr_config
+    external: true

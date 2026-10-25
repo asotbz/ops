@@ -1,0 +1,13 @@
+# DISPATCHARR STACK (deployed by doco-cd)
+# Dispatcharr, the IPTV proxy that serves ErsatzTV's channels and other sources to IPTV players. Its
+# all-in-one image runs its own Postgres and Redis inside the container. It extends the Baseline
+# (../_baseline.yaml).
+
+networks:
+  # Traefik and the Exposed Services it routes to; owned by the edge Stack (ADR 0002).
+  proxy:
+    name: proxy
+    external: true
+
+include:
+  - ./dispatcharr/service.yaml

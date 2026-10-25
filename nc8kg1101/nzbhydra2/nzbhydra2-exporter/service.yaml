@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  nzbhydra2-exporter:
+    # Indexer health for Prometheus; see nzbhydra2_exporter.py. It holds NZBHydra2's API key, so it
+    # is a sidecar in this Stack (ADR 0002). Still a script bind-mounted into a stock image, not yet
+    # a Custom Component image (ADR 0007).
+    # https://hub.docker.com/_/python
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: python:3.14.8-alpine3.24@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72
+    container_name: nzbhydra2-exporter
+    user: "65534:65534"
+    command: ["python3", "-u", "/app/nzbhydra2_exporter.py"]
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 28MiB (#304).
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:9811/metrics"]
+      interval: 60s
+      timeout: 25s
+      retries: 3
+      start_period: 30s
+      start_interval: 5s
+    environment:
+      - NZBHYDRA_URL=http://nzbhydra2:5076
+      - NZBHYDRA_API_KEY=${NZBHYDRA_API_KEY}
+    depends_on:
+      nzbhydra2:
+        condition: service_healthy
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: info
+      startup-order: "3"
+    volumes:
+      - ./nzbhydra2_exporter.py:/app/nzbhydra2_exporter.py:ro
+    networks:
+      - default
+      # Prometheus scrapes nzbhydra2-exporter:9811 (job nzbhydra2)
+      - metrics

@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  fuzzbin:
+    # https://github.com/asotbz/Fuzzbin
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: ghcr.io/asotbz/fuzzbin:0.5.0@sha256:4fb5db76c78a153ac281b0220178470fa559f08f682538382157643b87d1cd15
+    container_name: fuzzbin
+    # The Music Videos Library's owner. Fuzzbin ran as root under Portainer; the cutover chowns
+    # fuzzbin_config and the Library files root wrote to this user (asotbz/ops#304).
+    user: ${FUZZBIN_UID}:${FUZZBIN_GID}
+    # Every request in and out goes through gluetun's namespace, so Fuzzbin downloads only through
+    # the VPN. Traefik reaches it at gluetun's address on proxy.
+    network_mode: service:gluetun
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 144MiB (#304). Downloads run yt-dlp and ffmpeg in this
+          # container, so well above the Baseline's 1.5x until a 30-day peak exists to size it by.
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
+    environment:
+      # The user has no home in the image; yt-dlp and Python keep their caches under HOME.
+      - HOME=/tmp
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "2"
+      stack-back.volumes: true
+      stack-back.volumes.include: "fuzzbin_config"
+
+      # Its routers and Probe are on gluetun, whose network namespace it shares
+      # (gluetun/service.yaml).
+    volumes:
+      # Settings, its SQLite database and logs. Moved from Portainer's xfer_fuzzbin_config by hops
+      # volume move (asotbz/ops#304).
+      - config:/config
+      # Organizer of Music Videos (ADR 0008): read-write to its own Library only. Media mounts
+      # never create their source, so a missing folder fails the Deploy.
+      - type: bind
+        source: /var/media/music_videos
+        target: /music_videos
+        bind:
+          create_host_path: false
+
+volumes:
+  config:
+    name: fuzzbin_config
+    external: true

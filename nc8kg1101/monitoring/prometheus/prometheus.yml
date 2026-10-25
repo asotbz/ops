@@ -39,13 +39,13 @@ scrape_configs:
       - targets: ['doco-cd:9120']
         labels: {container: doco-cd, stack: ops, tier: critical}
 
-  # XFER STACK: indexer health from nzbhydra2's stats API (alerting-rules.yml, nzbhydra2).
+  # NZBHYDRA2 STACK: indexer health from nzbhydra2's stats API (alerting-rules.yml, nzbhydra2).
   - job_name: nzbhydra2
     scrape_interval: 60s
     scrape_timeout: 30s
     static_configs:
       - targets: ['nzbhydra2-exporter:9811']
-        labels: {container: nzbhydra2-exporter, stack: xfer, tier: info}
+        labels: {container: nzbhydra2-exporter, stack: nzbhydra2, tier: info}
 
   # MONITORING STACK
   - job_name: prometheus

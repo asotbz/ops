@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  dispatcharr:
+    # https://github.com/Dispatcharr/Dispatcharr
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: ghcr.io/dispatcharr/dispatcharr:0.30.0@sha256:e764cd3fb3a4b14e0c96eeb830cce645b44ef0a2494838e21462c71dde5abeb4
+    container_name: dispatcharr
+    # The all-in-one entrypoint starts as root: it owns /data to its user, then starts
+    # Postgres, Redis, nginx, uwsgi and celery as its user. It needs these to do so, and KILL to stop
+    # them on shutdown: without it the stop ends in SIGKILL and Postgres shuts down uncleanly.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - KILL
+      - SETGID
+      - SETUID
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 2029MiB (#304), Postgres and Redis included. The Baseline's
+          # 1.5x until a 30-day peak exists to size it by.
+          memory: 3G
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:9191/api/core/version/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+      start_interval: 5s
+    environment:
+      - DISPATCHARR_ENV=aio
+      - REDIS_HOST=localhost
+      - CELERY_BROKER_URL=redis://localhost:6379/0
+      # - DISPATCHARR_LOG_LEVEL=debug
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: warning
+      startup-order: "2"
+      stack-back.volumes: true
+      stack-back.volumes.include: "dispatcharr_data"
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.dispatcharr-http.rule: Host(`dsp.${DOMAIN}`)
+      traefik.http.routers.dispatcharr-http.entrypoints: http
+      traefik.http.routers.dispatcharr-http.middlewares: redirect-https
+
+      # Direct https requests to the service, checking with crowdsec first, then strip the PSK
+      # prefix. The unprefixed playlist, guide and HDHomeRun paths match no router, so Traefik
+      # answers 404: players reach them only under /${DISPATCHARR_PSK}/.
+      traefik.http.routers.dispatcharr-https.rule: Host(`dsp.${DOMAIN}`) && !(Path(`/hdhr`) || Path(`/output/epg`) || Path(`/output/m3u`))
+      traefik.http.routers.dispatcharr-https.entrypoints: https
+      traefik.http.routers.dispatcharr-https.tls: true
+      traefik.http.routers.dispatcharr-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.dispatcharr-https.service: dispatcharr
+      traefik.http.routers.dispatcharr-https.middlewares: dispatcharr-chain
+
+      # Internally replace designated paths
+      traefik.http.middlewares.dispatcharr-replacepaths.replacepathregex.regex: ^/${DISPATCHARR_PSK}/(.*)
+      traefik.http.middlewares.dispatcharr-replacepaths.replacepathregex.replacement: /$$1
+
+      # Chain middlewares: first check with crowdsec, then do path replacement
+      traefik.http.middlewares.dispatcharr-chain.chain.middlewares: crowdsec-bouncer,dispatcharr-replacepaths
+
+      traefik.http.services.dispatcharr.loadbalancer.server.port: 9191
+
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
+      probe.url: https://dsp.${DOMAIN}/api/core/version/
+    volumes:
+      # Its Postgres and Redis data, settings, logos and recordings. Moved from Portainer's
+      # xfer_dispatcharr_data by hops volume move (asotbz/ops#304).
+      - data:/data
+    networks:
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+
+volumes:
+  data:
+    name: dispatcharr_data
+    external: true
