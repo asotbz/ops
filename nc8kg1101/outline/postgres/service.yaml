@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  # Outline's database. Filled once from the legacy asot Postgres with pg_dump/pg_restore
+  # (asotbz/ops#303); the major version stays 17 to match that dump.
+  postgres:
+    # https://hub.docker.com/_/postgres
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    container_name: outline-postgres
+    # The image's postgres user; the entrypoint skips its chown + su-exec when not root, so no caps.
+    user: "70:70"
+    deploy:
+      resources:
+        limits:
+          # 7-day peak of the Postgres it shared with Authentik under Portainer: 328MiB (#303), for
+          # both databases; Outline's alone is smaller. Above 1.5x that whole peak.
+          memory: 512M
+    stop_grace_period: 60s
+    healthcheck:
+      # Over TCP, so it fails while the entrypoint's init server listens only on the socket.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    # POSTGRES_USER is the image's bootstrap superuser and Outline's own login. hops db and
+    # stack-back read POSTGRES_USER and POSTGRES_DB from here; the password only applies at initdb.
+    environment:
+      POSTGRES_USER: outline
+      POSTGRES_DB: outline
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "1"
+      # stack-back dumps POSTGRES_DB, the only database here (ADR 0004).
+      stack-back.postgres: true
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+      # stack-back (ops) dumps the database over the backup network.
+      - backup
+
+volumes:
+  # Created and filled by pg_restore before the cutover merge (asotbz/ops#303).
+  postgres_data:
+    name: outline_postgres_data
+    external: true

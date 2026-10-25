@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+# Authentik's server (web UI, API, embedded outpost) and worker (background tasks), one image.
+# They share everything but command, labels and networks, so one x- fragment holds it (as
+# upstream's compose file does); ADR 0006's objection to fragments is that they don't cross include.
+# https://docs.goauthentik.io/install-config/install/docker-compose/
+#
+# No Docker socket: the worker only needs it for a Docker outpost integration, and this Host runs
+# no outposts besides the server's embedded one. Forward auth (asotbz/ops#289) will use that
+# embedded outpost or a declared one, never one Authentik starts itself.
+# No /certs or /templates volumes: both were empty under Portainer. A custom template or a
+# certificate to discover would come back as a declared volume or bind mount.
+x-authentik: &authentik
+  extends:
+    file: ../../_baseline.yaml
+    service: baseline
+  image: ghcr.io/goauthentik/server:2026.5.5@sha256:50a833c48a714709f15d4f8846ec6b81a41d0d6a6bd2975087dfed3000d0d72e
+  # The owner of the files in authentik_media, carried over from Portainer.
+  user: ${AUTHENTIK_UID}:${AUTHENTIK_GID}
+  # As upstream's compose file.
+  shm_size: 512mb
+  deploy:
+    resources:
+      limits:
+        # 7-day peaks under Portainer: server 807MiB, worker 675MiB (#303). Above the Baseline's 1.5x
+        # until a 30-day peak exists to size it by.
+        memory: 1536M
+  healthcheck:
+    # The image's own check; it probes the server or worker, whichever this container runs.
+    test: ["CMD", "ak", "healthcheck"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 60s
+    start_interval: 5s
+  depends_on:
+    postgres:
+      condition: service_healthy
+      restart: true
+  # AUTHENTIK_SECRET_KEY
+  env_file: ../authentik.sops.env
+  environment:
+    AUTHENTIK_POSTGRESQL__HOST: postgres
+    AUTHENTIK_POSTGRESQL__NAME: authentik
+    AUTHENTIK_POSTGRESQL__USER: authentik
+    AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
+  volumes:
+    # Uploaded icons and backgrounds. The image links /data/media to /media, so the mount stays at
+    # /media; mounting a volume at /data instead would hide that link.
+    - media:/media
+
+services:
+  authentik-server:
+    <<: *authentik
+    container_name: authentik-server
+    command: server
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      # The IdP is Critical: every Protected Service fails with it (ADR 0005).
+      tier: critical
+      startup-order: "2"
+
+      stack-back.volumes: true
+      stack-back.volumes.include: "authentik_media"
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.authentik-server-http.rule: Host(`idp.${DOMAIN}`)
+      traefik.http.routers.authentik-server-http.entrypoints: http
+      traefik.http.routers.authentik-server-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.authentik-server-https.rule: Host(`idp.${DOMAIN}`)
+      traefik.http.routers.authentik-server-https.entrypoints: https
+      traefik.http.routers.authentik-server-https.tls: true
+      traefik.http.routers.authentik-server-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.authentik-server-https.service: authentik-server
+      traefik.http.routers.authentik-server-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.authentik-server.loadbalancer.server.port: 9000
+
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
+      probe.url: https://idp.${DOMAIN}/-/health/live/
+    networks:
+      - default
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+
+  authentik-worker:
+    <<: *authentik
+    container_name: authentik-worker
+    command: worker
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      # Without it, flows that run tasks (email, outpost and blueprint updates) stall.
+      tier: critical
+      startup-order: "2"
+    networks:
+      - default
+
+volumes:
+  # Moved from Portainer's asot_authentik_media by hops volume move (asotbz/ops#303).
+  media:
+    name: authentik_media
+    external: true

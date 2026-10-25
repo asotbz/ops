@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  # Outline's cache, websocket pub/sub and background job queues. Started empty at the cutover
+  # (asotbz/ops#303): the legacy Redis held only those, shared with Authentik.
+  redis:
+    # https://hub.docker.com/_/redis
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: redis:8.8.0-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
+    container_name: outline-redis
+    # The image's redis user; the entrypoint skips its chown + su-exec when not root, so no caps.
+    user: "999:1000"
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 26MiB, 19 keys (#303); 128M is a floor, not 1.5x.
+          memory: 128M
+    # Snapshots so queued jobs survive a restart. No password: only Outline, on outline_default,
+    # reaches it.
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "1"
+    volumes:
+      - redis_data:/data
+    networks:
+      - default
+
+volumes:
+  redis_data:
+    name: outline_redis_data
+    labels:
+      homeops.regenerable: "Outline refills its cache and queues; a lost volume drops only pending background jobs"

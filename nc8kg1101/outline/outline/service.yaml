@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  outline:
+    # https://docs.getoutline.com/s/hosting/doc/docker-7pfeLP5a8t
+    # https://github.com/outline/outline
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: outlinewiki/outline:1.10.1@sha256:832051f039b446c87aa23929cf92c00980c66aaa2d744d118c48c016ec816ad8
+    container_name: outline
+    # The owner of the files in outline_data, carried over from Portainer.
+    user: ${OUTLINE_UID}:${OUTLINE_GID}
+    deploy:
+      resources:
+        limits:
+          # 7-day peak under Portainer: 426MiB (#303). Above the Baseline's 1.5x until a 30-day peak
+          # exists to size it by.
+          memory: 1G
+    healthcheck:
+      # As the image's own HEALTHCHECK.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/_health | grep -q OK"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+    # SECRET_KEY, UTILS_SECRET, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, and the settings carried over
+    # from Portainer (URL, PORT=3000, FILE_STORAGE=local, PGSSLMODE=disable, ...).
+    env_file: ../outline.sops.env
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_NAME: outline
+      DATABASE_USER: outline
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: redis://redis:6379
+      # Protected Service (GLOSSARY.md) by native OIDC, ADR 0005's first mechanism: Outline signs
+      # users in at the IdP itself, and with no other sign-in method it sends them there by default.
+      # Why Protected (ADR 0005, decided by audience): the wiki holds private notes for invited
+      # people only, who already have IdP accounts. The IdP being down blocks new sign-ins only;
+      # Outline's own sessions keep working, and its Probe does not depend on the IdP.
+      # The client is the IdP's `outline` application (scripts/outline-oidc.sh). Endpoints are set
+      # one by one rather than through OIDC_ISSUER_URL: discovery runs at startup and exits when
+      # the IdP is down, which would make Outline crash-loop at boot (ADR 0003).
+      OIDC_AUTH_URI: https://idp.${DOMAIN}/application/o/authorize/
+      OIDC_TOKEN_URI: https://idp.${DOMAIN}/application/o/token/
+      OIDC_USERINFO_URI: https://idp.${DOMAIN}/application/o/userinfo/
+      OIDC_LOGOUT_URI: https://idp.${DOMAIN}/application/o/outline/end-session/
+      OIDC_DISPLAY_NAME: Single sign-on
+      OIDC_USERNAME_CLAIM: preferred_username
+      OIDC_SCOPES: openid profile email
+    labels:
+      # Alert Tier (GLOSSARY.md): critical | warning | info
+      tier: critical
+      startup-order: "2"
+
+      stack-back.volumes: true
+      stack-back.volumes.include: "outline_data"
+
+      traefik.enable: true
+
+      # Listen on http, but redirect all requests to https
+      traefik.http.routers.outline-http.rule: Host(`oln.${DOMAIN}`)
+      traefik.http.routers.outline-http.entrypoints: http
+      traefik.http.routers.outline-http.middlewares: redirect-https
+
+      # Direct all https requests to the service, checking with crowdsec first
+      traefik.http.routers.outline-https.rule: Host(`oln.${DOMAIN}`)
+      traefik.http.routers.outline-https.entrypoints: https
+      traefik.http.routers.outline-https.tls: true
+      traefik.http.routers.outline-https.tls.certresolver: ${CERT_RESOLVER}
+      traefik.http.routers.outline-https.service: outline
+      traefik.http.routers.outline-https.middlewares: crowdsec-bouncer
+
+      traefik.http.services.outline.loadbalancer.server.port: 3000
+
+      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
+      probe.url: https://oln.${DOMAIN}/_health
+      # A Protected Service's second Probe: its sign-in path must redirect to the IdP (job probe-idp).
+      probe.idp_url: https://oln.${DOMAIN}/auth/oidc
+      probe.idp_auth: oidc
+    volumes:
+      # Uploads and attachments (FILE_STORAGE=local). Moved from Portainer's asot_outline_data by
+      # hops volume move (asotbz/ops#303).
+      - data:/var/lib/outline/data
+    networks:
+      - default
+      # Routed by edge's Traefik (ADR 0002)
+      - proxy
+
+volumes:
+  data:
+    name: outline_data
+    external: true
