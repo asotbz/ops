@@ -5,7 +5,7 @@ services:
     extends:
       file: ../../_baseline.yaml
       service: baseline
-    image: lscr.io/linuxserver/nzbhydra2:9.1.1@sha256:123782636d66dc299b3addb617fd720a55ac2f858fa8ca312892bf9176492d58
+    image: lscr.io/linuxserver/nzbhydra2:9.1.1@sha256:52bbcf7fafb7dc4316936cd4694388b26ed7ddd4e3363bc961f7527e48c3594e
     container_name: nzbhydra2
     # Runs as the owner of nzbhydra2_config, so no caps. The LSIO image's s6 service always switches
     # to its own user, which a non-root container cannot, so this skips s6 and starts the wrapper
