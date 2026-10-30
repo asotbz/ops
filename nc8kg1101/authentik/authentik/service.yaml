@@ -13,7 +13,7 @@ x-authentik: &authentik
   extends:
     file: ../../_baseline.yaml
     service: baseline
-  image: ghcr.io/goauthentik/server:2026.5.5@sha256:50a833c48a714709f15d4f8846ec6b81a41d0d6a6bd2975087dfed3000d0d72e
+  image: ghcr.io/goauthentik/server:2026.8.5@sha256:602227a86455d6772e3d16b7d852713c4f864f40df5df894abd1285bb53979a5
   # The owner of the files in authentik_media, carried over from Portainer.
   user: ${AUTHENTIK_UID}:${AUTHENTIK_GID}
   # As upstream's compose file.
