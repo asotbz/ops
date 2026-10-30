@@ -86,6 +86,13 @@ The monitoring Stack keeps this Host's telemetry on the Host ([ADR 0011](docs/ad
 - Each alerting rule carries the Stack's `tier`. Alertmanager pages Pushover for `critical`, posts `critical` and
   `warning` to the Discord Digest grouped per Stack, drops `info`, and pings a healthchecks.io Heartbeat every
   minute from the always-firing `Watchdog`.
+- restic-exporter and backup-coverage read the offsite Backup repository hourly, independently of stack-back.
+  `BackupStale` Pages when the newest volumes or databases snapshot is over 26 hours old;
+  `BackupMetricsMissing` Pages after 3 hours without snapshot metrics. Coverage sends missing or unexpectedly
+  empty volumes, stale database dumps and failed or stalled checks to the Digest, allowing newly recreated
+  Services time for their first Backup. Both readers keep separate persistent, regenerable restic caches to
+  limit B2 calls, and neither cache is backed up. restic-exporter uses `NO_CHECK=true` because stack-back already
+  checks after each Backup.
 
 The notification credentials live in `nc8kg1101/monitoring/alertmanager/*.sops.txt`. Set or rotate one with
 `sops <file>`, through a PR. `hops alerts`, `hops stop --for` (silences) and `hops logs --loki` use this Stack.
@@ -96,6 +103,12 @@ The notification credentials live in `nc8kg1101/monitoring/alertmanager/*.sops.t
 - Each Host has its own age key, its Host Key. The private Host Key lives only on the Host, for doco-cd, at `/etc/doco-cd/age.key` (root, 0600, in a 0700 directory), and offline with the Operator. The Operator edits secrets with a separate Operator Key, which no Host holds. Files are moving from the old shared key to per-Host keys in #298.
 - Edit a Stack's values with `sops nc8kg1101/<stack>/.sops.env`. Plaintext `*.env` files are gitignored; encrypted files are named `*.sops.*` and tracked.
 - Never print a secret value; read SOPS files by key name only (see [AGENTS.md](AGENTS.md#secrets)).
+- The B2 keys are separate: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in
+  `nc8kg1101/ops/stack-back.sops.env` are stack-back's read-write key; the same variable names in
+  `nc8kg1101/monitoring/restic-exporter/b2.sops.env` are the bucket-scoped read-only key shared by
+  restic-exporter and backup-coverage. That file also holds the same `RESTIC_REPOSITORY` and `RESTIC_PASSWORD`
+  stack-back uses. Rotate the reader key there without changing the writer key. The bucket lifecycle remains
+  "Keep only the last version of the file".
 
 ## Bootstrapping doco-cd
 

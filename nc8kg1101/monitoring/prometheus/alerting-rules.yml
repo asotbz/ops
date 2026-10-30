@@ -275,6 +275,80 @@ groups:
           summary: doco-cd cannot poll the repository
           description: "{{ $value | humanize }} polls of the repository failed in 15 minutes."
 
+  - name: backups
+    rules:
+      # Retention keeps groups for old container hostnames and path lists. Only the newest
+      # snapshot of each kind matters, not every superseded group.
+      - alert: BackupStale
+        expr: |
+          time() - max by (kind) (
+            label_replace(restic_backup_timestamp{snapshot_paths=~"/(volumes|databases).*"},
+              "kind", "$1", "snapshot_paths", "^/(volumes|databases).*")
+          ) > 26 * 3600
+        labels:
+          tier: critical
+          stack: ops
+        annotations:
+          summary: "No {{ $labels.kind }} backup in over 26h"
+          description: "The newest restic snapshot of {{ $labels.kind }} is {{ $value | humanizeDuration }} old."
+
+      - alert: BackupMetricsMissing
+        expr: absent(restic_backup_timestamp)
+        for: 3h
+        labels:
+          tier: critical
+          stack: ops
+        annotations:
+          summary: Backup freshness is unknown
+          description: The restic exporter has reported no snapshots for 3 hours, so BackupStale cannot fire.
+
+      # Due waits for the first Backup after a recreate. An empty live volume may back up empty;
+      # unknown live size (-1) is not evidence that the volume is empty.
+      - alert: BackupVolumeMissing
+        expr: |
+          label_replace(backup_coverage_entries, "project", "ops", "project", "") == 0
+            and on (path) backup_coverage_due == 1
+            and on (path) backup_coverage_volume_bytes != 0
+        labels:
+          tier: warning
+          stack: "{{ $labels.project }}"
+        annotations:
+          summary: "{{ $labels.service }} volume missing from the newest backup"
+          description: "{{ $labels.path }} is missing or empty in the newest /volumes snapshot, but the volume holds data."
+
+      - alert: BackupDatabaseStale
+        expr: |
+          time() - label_replace(backup_coverage_snapshot_timestamp{kind="database"}, "project", "ops", "project", "") > 26 * 3600
+            and on (path) backup_coverage_due == 1
+        labels:
+          tier: warning
+          stack: "{{ $labels.project }}"
+        annotations:
+          summary: "No {{ $labels.service }} database backup in over 26h"
+          description: "The newest snapshot of {{ $labels.path }} is {{ $value | humanizeDuration }} old (or there is none)."
+
+      - alert: BackupCoverageUnknown
+        expr: |
+          time() - backup_coverage_last_success_timestamp > 3 * 3600
+            or absent(backup_coverage_last_success_timestamp)
+        for: 3h
+        labels:
+          tier: warning
+          stack: monitoring
+        annotations:
+          summary: Backup coverage is unknown
+          description: Coverage results have been missing or more than 3 hours old for 3 hours; check backup-coverage.
+
+      - alert: BackupCoverageBlind
+        expr: backup_coverage_up == 0
+        for: 90m
+        labels:
+          tier: warning
+          stack: monitoring
+        annotations:
+          summary: backup-coverage cannot read Docker or restic
+          description: "backup-coverage's last two checks could not read the Docker API through docker-socket-proxy or the restic repository; its log names which. Backup coverage alerts are blind."
+
   # Indexer health from nzbhydra2's stats API (nzbhydra2-exporter). Warning, as its Stack is.
   - name: nzbhydra2
     rules:

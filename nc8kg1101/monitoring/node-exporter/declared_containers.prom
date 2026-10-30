@@ -15,6 +15,7 @@ homeops_container_declared{stack="fuzzbin",service="fuzzbin",name="fuzzbin",tier
 homeops_container_declared{stack="fuzzbin",service="gluetun",name="gluetun",tier="warning"} 1
 homeops_container_declared{stack="monitoring",service="alertmanager",name="alertmanager",tier="critical"} 1
 homeops_container_declared{stack="monitoring",service="alloy",name="alloy",tier="warning"} 1
+homeops_container_declared{stack="monitoring",service="backup-coverage",name="backup-coverage",tier="warning"} 1
 homeops_container_declared{stack="monitoring",service="blackbox-exporter",name="blackbox-exporter",tier="warning"} 1
 homeops_container_declared{stack="monitoring",service="cadvisor",name="cadvisor",tier="warning"} 1
 homeops_container_declared{stack="monitoring",service="container-health-exporter",name="container-health-exporter",tier="info"} 1
@@ -23,6 +24,7 @@ homeops_container_declared{stack="monitoring",service="docker-socket-proxy",name
 homeops_container_declared{stack="monitoring",service="loki",name="loki",tier="warning"} 1
 homeops_container_declared{stack="monitoring",service="node-exporter",name="node-exporter",tier="warning"} 1
 homeops_container_declared{stack="monitoring",service="prometheus",name="prometheus",tier="critical"} 1
+homeops_container_declared{stack="monitoring",service="restic-exporter",name="restic-exporter",tier="warning"} 1
 homeops_container_declared{stack="nzbhydra2",service="nzbhydra2",name="nzbhydra2",tier="warning"} 1
 homeops_container_declared{stack="nzbhydra2",service="nzbhydra2-exporter",name="nzbhydra2-exporter",tier="info"} 1
 homeops_container_declared{stack="ops",service="apprise",name="apprise",tier="warning"} 1
