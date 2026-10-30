@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  backup-coverage:
+    # Per-volume and per-database Backup coverage, through the read-only Docker API.
+    # Source: components/backup-coverage in the Repo Tooling repo (ADR 0007).
+    extends:
+      file: ../../_baseline.yaml
+      service: baseline
+    image: ghcr.io/jbruns/backup-coverage:1.0.0@sha256:ed5722b10e3f0bd0e9b90d51080d392467bb404116a97f490e7d97c014a96fe8
+    container_name: backup-coverage
+    # The persistent restic cache is root-owned.
+    user: "0:0"
+    deploy:
+      resources:
+        limits:
+          # Initial allowance for restic's repository index; revisit after 30 days.
+          memory: 1536M
+    read_only: true
+    depends_on:
+      docker-socket-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/python3", "-m", "backup_coverage", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 5s
+    env_file: ../restic-exporter/b2.sops.env
+    environment:
+      DOCKER_HOST: tcp://docker-socket-proxy:2375
+      RESTIC_CACHE_DIR: /cache
+      REFRESH_INTERVAL: "3600"
+      EXCLUDE_BIND_MOUNTS: "true"
+      # Match stack-back's SWARM_MODE=true without adding Stack names to snapshot paths.
+      # Any nonempty value includes every Stack; only "true" also adds the Stack name.
+      INCLUDE_ALL_COMPOSE_PROJECTS: "false"
+    labels:
+      tier: warning
+      startup-order: "3"
+    volumes:
+      - backup-coverage_cache:/cache
+    networks:
+      - default
+
+volumes:
+  backup-coverage_cache:
+    name: monitoring_backup-coverage_cache
+    labels:
+      homeops.regenerable: "restic rebuilds its cache from the repository"

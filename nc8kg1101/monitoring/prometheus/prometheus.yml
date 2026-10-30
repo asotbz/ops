@@ -48,6 +48,18 @@ scrape_configs:
         labels: {container: nzbhydra2-exporter, stack: nzbhydra2, tier: info}
 
   # MONITORING STACK
+  - job_name: restic-exporter
+    scrape_interval: 60s
+    static_configs:
+      - targets: ['restic-exporter:8001']
+        labels: {container: restic-exporter, stack: monitoring, tier: warning}
+
+  - job_name: backup-coverage
+    scrape_interval: 60s
+    static_configs:
+      - targets: ['backup-coverage:8002']
+        labels: {container: backup-coverage, stack: monitoring, tier: warning}
+
   - job_name: prometheus
     basic_auth:
       username: prometheus

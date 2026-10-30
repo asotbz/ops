@@ -19,6 +19,7 @@ networks:
 include:
   - ./alertmanager/service.yaml
   - ./alloy/service.yaml
+  - ./backup-coverage/service.yaml
   - ./blackbox-exporter/service.yaml
   - ./cadvisor/service.yaml
   - ./container-health-exporter/service.yaml
@@ -26,3 +27,4 @@ include:
   - ./loki/service.yaml
   - ./node-exporter/service.yaml
   - ./prometheus/service.yaml
+  - ./restic-exporter/service.yaml

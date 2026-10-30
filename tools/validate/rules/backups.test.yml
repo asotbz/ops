@@ -1,0 +1,164 @@
+rule_files:
+  - /etc/prometheus/alerting-rules.yml
+evaluation_interval: 1m
+tests:
+  - name: BackupStale ignores superseded groups and clears when the missing kind returns
+    interval: 1h
+    input_series:
+      - series: restic_backup_timestamp{snapshot_paths="/volumes/old/data",client_hostname="old"}
+        values: 0x28
+      - series: restic_backup_timestamp{snapshot_paths="/volumes/current/data",client_hostname="current"}
+        values: 0+3600x28
+      - series: restic_backup_timestamp{snapshot_paths="/databases/postgres/data.sql"}
+        values: 0x27 100800
+    promql_expr_test:
+      - expr: &stale sum by (alertname, tier, stack, kind) (ALERTS{alertname="BackupStale",alertstate="firing"})
+        eval_time: 26h
+        exp_samples: []
+      - expr: *stale
+        eval_time: 27h
+        exp_samples:
+          - labels: '{alertname="BackupStale",tier="critical",stack="ops",kind="databases"}'
+            value: 1
+      - expr: *stale
+        eval_time: 28h
+        exp_samples: []
+
+  - name: BackupMetricsMissing waits three hours and clears on the first snapshot
+    interval: 1h
+    input_series:
+      - series: restic_backup_timestamp{snapshot_paths="/volumes/app/data"}
+        values: _x4 14400+3600x2
+    promql_expr_test:
+      - expr: &missing sum by (alertname, tier, stack) (ALERTS{alertname="BackupMetricsMissing",alertstate="firing"})
+        eval_time: 179m
+        exp_samples: []
+      - expr: *missing
+        eval_time: 3h
+        exp_samples:
+          - labels: '{alertname="BackupMetricsMissing",tier="critical",stack="ops"}'
+            value: 1
+      - expr: *missing
+        eval_time: 4h
+        exp_samples: []
+
+  - name: BackupVolumeMissing reports due nonempty volumes and clears when their contents return
+    interval: 1m
+    input_series:
+      - series: backup_coverage_entries{kind="volume",project="outline",service="outline",path="/volumes/outline/data"}
+        values: 0 2
+      - series: backup_coverage_due{path="/volumes/outline/data"}
+        values: 1x1
+      - series: backup_coverage_volume_bytes{path="/volumes/outline/data"}
+        values: 1024x1
+      - series: backup_coverage_entries{kind="volume",project="",service="unknown",path="/volumes/unknown/data"}
+        values: 0 1
+      - series: backup_coverage_due{path="/volumes/unknown/data"}
+        values: 1x1
+      - series: backup_coverage_volume_bytes{path="/volumes/unknown/data"}
+        values: -1x1
+      - series: backup_coverage_entries{kind="volume",project="app",service="empty",path="/volumes/empty/data"}
+        values: 0x1
+      - series: backup_coverage_due{path="/volumes/empty/data"}
+        values: 1x1
+      - series: backup_coverage_volume_bytes{path="/volumes/empty/data"}
+        values: 0x1
+      - series: backup_coverage_entries{kind="volume",project="app",service="new",path="/volumes/new/data"}
+        values: 0x1
+      - series: backup_coverage_due{path="/volumes/new/data"}
+        values: 0x1
+      - series: backup_coverage_volume_bytes{path="/volumes/new/data"}
+        values: 1024x1
+    promql_expr_test:
+      - expr: &volume sum by (alertname, tier, stack, service) (ALERTS{alertname="BackupVolumeMissing",alertstate="firing"})
+        eval_time: 0m
+        exp_samples:
+          - labels: '{alertname="BackupVolumeMissing",tier="warning",stack="outline",service="outline"}'
+            value: 1
+          - labels: '{alertname="BackupVolumeMissing",tier="warning",stack="ops",service="unknown"}'
+            value: 1
+      - expr: *volume
+        eval_time: 1m
+        exp_samples: []
+
+  - name: BackupDatabaseStale catches one missing dump despite other fresh dumps and respects recreate grace
+    interval: 1h
+    input_series:
+      - series: backup_coverage_snapshot_timestamp{kind="database",project="outline",service="postgres",path="/databases/postgres/outline.sql"}
+        values: 0x27 100800
+      - series: backup_coverage_due{path="/databases/postgres/outline.sql"}
+        values: 1x28
+      - series: backup_coverage_snapshot_timestamp{kind="database",project="authentik",service="postgres",path="/databases/postgres/authentik.sql"}
+        values: 0+3600x28
+      - series: backup_coverage_due{path="/databases/postgres/authentik.sql"}
+        values: 1x28
+      - series: backup_coverage_snapshot_timestamp{kind="database",project="new",service="postgres",path="/databases/postgres/new.sql"}
+        values: 0x28
+      - series: backup_coverage_due{path="/databases/postgres/new.sql"}
+        values: 0x28
+    promql_expr_test:
+      - expr: &database sum by (alertname, tier, stack, service) (ALERTS{alertname="BackupDatabaseStale",alertstate="firing"})
+        eval_time: 26h
+        exp_samples: []
+      - expr: *database
+        eval_time: 27h
+        exp_samples:
+          - labels: '{alertname="BackupDatabaseStale",tier="warning",stack="outline",service="postgres"}'
+            value: 1
+      - expr: *database
+        eval_time: 28h
+        exp_samples: []
+
+  - name: BackupCoverageUnknown detects missing first results and clears on success
+    interval: 1h
+    input_series:
+      - series: backup_coverage_last_success_timestamp
+        values: _x4 14400+3600x2
+    promql_expr_test:
+      - expr: &unknown sum by (alertname, tier, stack) (ALERTS{alertname="BackupCoverageUnknown",alertstate="firing"})
+        eval_time: 179m
+        exp_samples: []
+      - expr: *unknown
+        eval_time: 3h
+        exp_samples:
+          - labels: '{alertname="BackupCoverageUnknown",tier="warning",stack="monitoring"}'
+            value: 1
+      - expr: *unknown
+        eval_time: 4h
+        exp_samples: []
+
+  - name: BackupCoverageUnknown detects a stalled check even while its cached results are scraped
+    interval: 1h
+    input_series:
+      - series: backup_coverage_last_success_timestamp
+        values: 0x7 28800
+    promql_expr_test:
+      - expr: *unknown
+        eval_time: 6h
+        exp_samples: []
+      - expr: *unknown
+        eval_time: 361m
+        exp_samples:
+          - labels: '{alertname="BackupCoverageUnknown",tier="warning",stack="monitoring"}'
+            value: 1
+      - expr: *unknown
+        eval_time: 8h
+        exp_samples: []
+
+  - name: BackupCoverageBlind waits through a transient hourly failure and clears on success
+    interval: 1m
+    input_series:
+      - series: backup_coverage_up{job="backup-coverage",stack="monitoring",tier="warning"}
+        values: 0x90 1
+    promql_expr_test:
+      - expr: &blind sum by (alertname, tier, stack) (ALERTS{alertname="BackupCoverageBlind",alertstate="firing"})
+        eval_time: 89m
+        exp_samples: []
+      - expr: *blind
+        eval_time: 90m
+        exp_samples:
+          - labels: '{alertname="BackupCoverageBlind",tier="warning",stack="monitoring"}'
+            value: 1
+      - expr: *blind
+        eval_time: 91m
+        exp_samples: []
