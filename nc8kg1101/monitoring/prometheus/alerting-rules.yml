@@ -435,5 +435,5 @@ groups:
           tier: warning
           stack: dispatcharr
         annotations:
-          summary: "Dispatcharr channel {{ $labels.channel_name }} is running at {{ $value }}x real time"
+          summary: "Dispatcharr channel {{ $labels.channel_name }} is running at {{ printf \"%.2f\" $value }}x real time"
           description: "Channel {{ $labels.channel_number }} ({{ $labels.channel_name }}) has been under 0.95x real time for 5 minutes; viewers are likely buffering."

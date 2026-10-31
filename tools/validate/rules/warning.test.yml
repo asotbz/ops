@@ -443,7 +443,7 @@ tests:
         exp_alerts:
           - exp_labels: {tier: warning, stack: dispatcharr, channel_uuid: a, channel_number: "101.0", channel_name: Sports One}
             exp_annotations:
-              summary: Dispatcharr channel Sports One is running at 0.9x real time
+              summary: Dispatcharr channel Sports One is running at 0.90x real time
               description: "Channel 101.0 (Sports One) has been under 0.95x real time for 5 minutes; viewers are likely buffering."
 
   # Silence from the Dispatcharr alerts means "healthy" only while its metrics are scraped.

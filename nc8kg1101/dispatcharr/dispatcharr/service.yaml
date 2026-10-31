@@ -53,7 +53,7 @@ services:
       resources:
         limits:
           # 7-day peak under Portainer: 2029MiB (#304), Postgres and Redis included. The ffmpeg
-          # default profile (below) adds one ffmpeg per active channel, about 50-100MiB each (#350).
+          # default profile (above) adds one ffmpeg per active channel, about 50-100MiB each (#350).
           # Revisit against the peak of the first crowded event.
           memory: 4G
     healthcheck:
