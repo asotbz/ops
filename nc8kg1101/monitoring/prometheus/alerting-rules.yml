@@ -406,3 +406,34 @@ groups:
         annotations:
           summary: "{{ $labels.indexer }} VIP expires in {{ $value | humanizeDuration }}"
           description: "Renew the {{ $labels.indexer }} VIP membership."
+
+  # Live channel health from Dispatcharr's exporter plugin (job dispatcharr), which reports ffmpeg's
+  # speed only for ffmpeg-family stream profiles. The scrape failing is TargetDown's.
+  - name: dispatcharr
+    rules:
+      # Dispatcharr fails over after buffering_timeout (seconds); a channel still buffering minutes
+      # later has run out of good sources.
+      - alert: DispatcharrChannelBuffering
+        expr: max by (channel_uuid, channel_number, channel_name) (dispatcharr_stream_metadata{type="live",state="buffering"}) == 1
+        for: 3m
+        labels:
+          tier: warning
+          stack: dispatcharr
+        annotations:
+          summary: "Dispatcharr channel {{ $labels.channel_name }} is buffering"
+          description: "Channel {{ $labels.channel_number }} ({{ $labels.channel_name }}) has been buffering for 3 minutes; Dispatcharr's own failover has not recovered it."
+
+      # Degradation under Dispatcharr's own buffering_speed (1.0) that its failover has not acted on.
+      # The speed series has no channel_name; it comes from the stream's metadata.
+      - alert: DispatcharrChannelSlow
+        expr: |
+          (max by (channel_uuid, channel_number) (dispatcharr_stream_buffering_speed{type="live"}) < 0.95)
+            * on (channel_uuid) group_left (channel_name)
+              max by (channel_uuid, channel_name) (dispatcharr_stream_metadata{type="live"})
+        for: 5m
+        labels:
+          tier: warning
+          stack: dispatcharr
+        annotations:
+          summary: "Dispatcharr channel {{ $labels.channel_name }} is running at {{ $value }}x real time"
+          description: "Channel {{ $labels.channel_number }} ({{ $labels.channel_name }}) has been under 0.95x real time for 5 minutes; viewers are likely buffering."

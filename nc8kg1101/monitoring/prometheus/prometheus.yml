@@ -47,6 +47,13 @@ scrape_configs:
       - targets: ['nzbhydra2-exporter:9811']
         labels: {container: nzbhydra2-exporter, stack: nzbhydra2, tier: info}
 
+  # DISPATCHARR STACK: per-channel speed, bitrate and state from its exporter plugin, which serves
+  # inside the Dispatcharr container (alerting-rules.yml, dispatcharr).
+  - job_name: dispatcharr
+    static_configs:
+      - targets: ['dispatcharr:9192']
+        labels: {container: dispatcharr, stack: dispatcharr, tier: warning}
+
   # MONITORING STACK
   - job_name: restic-exporter
     scrape_interval: 60s
