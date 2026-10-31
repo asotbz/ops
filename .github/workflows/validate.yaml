@@ -51,7 +51,7 @@ jobs:
   repo:
     name: secrets, env, compose, cloudflare, isolation, privacy
     needs: validate-args
-    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@b59b24fbb343d5838f90eb8abd7f943488e0846c # repo-ci-v1.1.0
+    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@10df8f81684de522356a4a7627bd817676ced32f # repo-ci-v1.2.0
     with:
       checks: secrets env compose cloudflare isolation privacy
       extra-args: ${{ needs.validate-args.outputs.args }}
@@ -62,7 +62,7 @@ jobs:
   monitoring:
     name: monitoring configs, rules, dashboards, Grafana
     needs: validate-args
-    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@b59b24fbb343d5838f90eb8abd7f943488e0846c # repo-ci-v1.1.0
+    uses: jbruns/homelab-components/.github/workflows/repo-validate.yaml@10df8f81684de522356a4a7627bd817676ced32f # repo-ci-v1.2.0
     with:
       checks: monitoring
       timeout-minutes: 10
@@ -70,16 +70,16 @@ jobs:
 
   declared-containers:
     name: declared containers
-    uses: jbruns/homelab-components/.github/workflows/repo-declared-containers.yaml@b59b24fbb343d5838f90eb8abd7f943488e0846c # repo-ci-v1.1.0
+    uses: jbruns/homelab-components/.github/workflows/repo-declared-containers.yaml@10df8f81684de522356a4a7627bd817676ced32f # repo-ci-v1.2.0
 
   # The one-time full-history scan ran before adoption (#308: 597 commits, no leaks).
   gitleaks:
     name: gitleaks
-    uses: jbruns/homelab-components/.github/workflows/repo-gitleaks.yaml@b59b24fbb343d5838f90eb8abd7f943488e0846c # repo-ci-v1.1.0
+    uses: jbruns/homelab-components/.github/workflows/repo-gitleaks.yaml@10df8f81684de522356a4a7627bd817676ced32f # repo-ci-v1.2.0
 
   tooling:
     name: renovate config, actionlint
-    uses: jbruns/homelab-components/.github/workflows/repo-lint.yaml@b59b24fbb343d5838f90eb8abd7f943488e0846c # repo-ci-v1.1.0
+    uses: jbruns/homelab-components/.github/workflows/repo-lint.yaml@10df8f81684de522356a4a7627bd817676ced32f # repo-ci-v1.2.0
 
   # The single required check on main: fails unless every job above succeeded.
   validate:
