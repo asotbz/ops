@@ -1,11 +1,43 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+#
+# RUNTIME STATE (#350). These live in Dispatcharr's database, not in env: apply them once through
+# the UI or API after a rebuild or a restore that predates them, then run the acceptance check.
+#
+# Exporter plugin, Plugins: upload the Dispatcharr Exporter plugin 3.1.0,
+#   https://github.com/swvn-dispatch/dispatcharr-exporter/releases/download/v3.1.0/dispatcharr-exporter-3.1.0.zip
+#   (sha256 c461f3602b95fd06bf1e0410a408089fdcc76888cf47d3c941c3d7062a7a91ce), restart, enable it.
+#   Settings: auto_start on, host 0.0.0.0, port 9192; client, source URL and user stats off.
+#
+# Stream profile "ffmpeg remux (fast)", command ffmpeg. A remux: video copied, audio normalised to
+# AC3 for clients that choke on other codecs, subtitle and data streams dropped (they stall ffmpeg),
+# probing cut to about a second. ffmpeg reports its speed, so Dispatcharr can see a stream fall
+# behind real time and fail over; passthrough (Proxy) reports none. Parameters:
+#   -fflags +discardcorrupt+genpts+nobuffer -probesize 1000000 -analyzeduration 1000000
+#   -user_agent {userAgent} -i {streamUrl} -map 0 -sn -dn -c:v copy -c:a ac3
+#   -mpegts_flags +pat_pmt_at_frames+resend_headers+initial_discontinuity -f mpegts pipe:1
+# Settings > Stream: default_stream_profile is that profile. Channels use the default unless set
+# otherwise; Proxy stays a per-channel override for a channel whose zap time is too long (it then
+# loses buffering failover).
+#
+# Settings > Proxy (starting values, tuned after the first crowded event):
+#   new_client_behind_seconds 10  late joiners start behind the live edge, with a buffer
+#   buffering_speed 1.0           below real time counts as buffering
+#   buffering_timeout 20          only sustained buffering fails over
+#   stream_startup_timeout 20     covers ffmpeg's probe at tune-in (default 8)
+#   connection_timeout 10         Stream Idle Timeout: upstream silence before failover
+#   channel_shutdown_delay 30     keeps a channel's upstream slot through short client gaps
+#   redis_chunk_ttl 60            unchanged; bounds how far behind a joiner can start
+#
+# Acceptance check: the dispatcharr target is up in Prometheus; a live channel has
+# dispatcharr_stream_buffering_speed and dispatcharr_stream_avg_bitrate_bps series; its Probe is
+# green; M3U, EPG and HDHR answer under the pre-shared key path.
 services:
   dispatcharr:
     # https://github.com/Dispatcharr/Dispatcharr
     extends:
       file: ../../_baseline.yaml
       service: baseline
-    image: ghcr.io/dispatcharr/dispatcharr:0.30.0@sha256:e764cd3fb3a4b14e0c96eeb830cce645b44ef0a2494838e21462c71dde5abeb4
+    image: ghcr.io/dispatcharr/dispatcharr:0.33.0@sha256:96bc548978c68e684677da7895692eeeefb7f0b2edfa38311dac2b702c61d236
     container_name: dispatcharr
     # The all-in-one entrypoint starts as root: it owns /data to its user, then starts
     # Postgres, Redis, nginx, uwsgi and celery as its user. It needs these to do so, and KILL to stop
@@ -20,9 +52,10 @@ services:
     deploy:
       resources:
         limits:
-          # 7-day peak under Portainer: 2029MiB (#304), Postgres and Redis included. The Baseline's
-          # 1.5x until a 30-day peak exists to size it by.
-          memory: 3G
+          # 7-day peak under Portainer: 2029MiB (#304), Postgres and Redis included. The ffmpeg
+          # default profile (above) adds one ffmpeg per active channel, about 50-100MiB each (#350).
+          # Revisit against the peak of the first crowded event.
+          memory: 4G
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:9191/api/core/version/"]
       interval: 30s
@@ -78,6 +111,9 @@ services:
     networks:
       # Routed by edge's Traefik (ADR 0002)
       - proxy
+      # Prometheus scrapes the exporter plugin on dispatcharr:9192 (job dispatcharr). Traefik routes
+      # only 9191 and no host port is published, so the unauthenticated metrics stay internal.
+      - metrics
 
 volumes:
   data:

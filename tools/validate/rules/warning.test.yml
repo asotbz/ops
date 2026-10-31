@@ -382,3 +382,82 @@ tests:
             exp_annotations:
               summary: nzbhydra2 disabled indexer alpha
               description: "alpha is disabled by nzbhydra2. Last error: Bad API key"
+
+  # The exporter labels each stream with its state, so a state change ends one series (`stale`) and starts another.
+  - name: DispatcharrChannelBuffering waits three minutes, ignores a short dip and names the channel
+    interval: 1m
+    input_series:
+      - series: dispatcharr_stream_metadata{job="dispatcharr",type="live",channel_uuid="a",channel_number="101.0",channel_name="Sports One",state="buffering"}
+        values: _ _ _ 1 1 1 1 1 stale
+      - series: dispatcharr_stream_metadata{job="dispatcharr",type="live",channel_uuid="b",channel_number="102.0",channel_name="News",state="buffering"}
+        values: _ _ _ 1 1 stale
+      - series: dispatcharr_stream_metadata{job="dispatcharr",type="live",channel_uuid="c",channel_number="103.0",channel_name="Movies",state="active"}
+        values: 1x10
+    promql_expr_test:
+      - expr: &dspbuf sum by (alertname, tier, stack, channel_name) (ALERTS{alertname="DispatcharrChannelBuffering",alertstate="firing"})
+        eval_time: 5m
+        exp_samples: []
+      - expr: *dspbuf
+        eval_time: 6m
+        exp_samples:
+          - labels: '{alertname="DispatcharrChannelBuffering",tier="warning",stack="dispatcharr",channel_name="Sports One"}'
+            value: 1
+      - expr: *dspbuf
+        eval_time: 9m
+        exp_samples: []
+    alert_rule_test:
+      - alertname: DispatcharrChannelBuffering
+        eval_time: 7m
+        exp_alerts:
+          - exp_labels: {tier: warning, stack: dispatcharr, channel_uuid: a, channel_number: "101.0", channel_name: Sports One}
+            exp_annotations:
+              summary: Dispatcharr channel Sports One is buffering
+              description: "Channel 101.0 (Sports One) has been buffering for 3 minutes; Dispatcharr's own failover has not recovered it."
+
+  - name: DispatcharrChannelSlow waits five minutes under 0.95x, ignores a short dip and names the channel
+    interval: 1m
+    input_series:
+      - series: dispatcharr_stream_buffering_speed{job="dispatcharr",type="live",channel_uuid="a",channel_number="101.0"}
+        values: 1 1 0.9 0.9 0.9 0.9 0.9 0.9 1.01 1.01
+      - series: dispatcharr_stream_buffering_speed{job="dispatcharr",type="live",channel_uuid="b",channel_number="102.0"}
+        values: 1 0.8 0.8 0.8 1 1 1 1 1 1
+      - series: dispatcharr_stream_metadata{job="dispatcharr",type="live",channel_uuid="a",channel_number="101.0",channel_name="Sports One",state="active"}
+        values: 1x10
+      - series: dispatcharr_stream_metadata{job="dispatcharr",type="live",channel_uuid="b",channel_number="102.0",channel_name="News",state="active"}
+        values: 1x10
+    promql_expr_test:
+      - expr: &dspslow sum by (alertname, tier, stack, channel_name) (ALERTS{alertname="DispatcharrChannelSlow",alertstate="firing"})
+        eval_time: 6m
+        exp_samples: []
+      - expr: *dspslow
+        eval_time: 7m
+        exp_samples:
+          - labels: '{alertname="DispatcharrChannelSlow",tier="warning",stack="dispatcharr",channel_name="Sports One"}'
+            value: 1
+      - expr: *dspslow
+        eval_time: 8m
+        exp_samples: []
+    alert_rule_test:
+      - alertname: DispatcharrChannelSlow
+        eval_time: 7m
+        exp_alerts:
+          - exp_labels: {tier: warning, stack: dispatcharr, channel_uuid: a, channel_number: "101.0", channel_name: Sports One}
+            exp_annotations:
+              summary: Dispatcharr channel Sports One is running at 0.90x real time
+              description: "Channel 101.0 (Sports One) has been under 0.95x real time for 5 minutes; viewers are likely buffering."
+
+  # Silence from the Dispatcharr alerts means "healthy" only while its metrics are scraped.
+  - name: TargetDown covers the Dispatcharr exporter at the Warning Tier
+    interval: 1m
+    input_series:
+      - series: up{job="dispatcharr",container="dispatcharr",stack="dispatcharr",tier="warning"}
+        values: 1 0x6
+    promql_expr_test:
+      - expr: &dspdown sum by (alertname, tier, stack, job) (ALERTS{alertname="TargetDown",alertstate="firing"})
+        eval_time: 5m
+        exp_samples: []
+      - expr: *dspdown
+        eval_time: 6m
+        exp_samples:
+          - labels: '{alertname="TargetDown",tier="warning",stack="dispatcharr",job="dispatcharr"}'
+            value: 1

@@ -8,6 +8,10 @@ networks:
   proxy:
     name: proxy
     external: true
+  # Prometheus and the exporters it scrapes; owned by the monitoring Stack (ADR 0002).
+  metrics:
+    name: metrics
+    external: true
 
 include:
   - ./dispatcharr/service.yaml
