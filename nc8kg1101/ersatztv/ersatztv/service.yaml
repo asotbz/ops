@@ -5,7 +5,7 @@ services:
     extends:
       file: ../../_baseline.yaml
       service: baseline
-    image: ghcr.io/ersatztv/legacy:v26.6.0@sha256:5fdd4e1d819416934f9090b322f055fa41284ce69b9dae9dedeb13feda453f00
+    image: ghcr.io/ersatztv/legacy:v26.12.0@sha256:cfe78ee1148f90d96582dcc58196f4b2153f9e6f70c1bcf6baab3b375d675a47
     container_name: ersatztv
     # The owner of the files in ersatztv_config, carried over from Portainer.
     user: ${ERSATZTV_UID}:${ERSATZTV_GID}
