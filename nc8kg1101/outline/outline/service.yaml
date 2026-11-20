@@ -6,7 +6,7 @@ services:
     extends:
       file: ../../_baseline.yaml
       service: baseline
-    image: outlinewiki/outline:1.10.1@sha256:832051f039b446c87aa23929cf92c00980c66aaa2d744d118c48c016ec816ad8
+    image: outlinewiki/outline:1.13.0@sha256:4583bb244dbb4464d8a632c75044d3b2f9fe44382b6a4b84d97995f473b823e4
     container_name: outline
     # The owner of the files in outline_data, carried over from Portainer.
     user: ${OUTLINE_UID}:${OUTLINE_GID}
