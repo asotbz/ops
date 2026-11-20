@@ -35,6 +35,9 @@ services:
       start_interval: 5s
     environment:
       - HOME=/home/mitmproxy
+      # mitmdump logs to stdout, which Python block-buffers off a TTY: without this, its log lines
+      # (and the addon's warnings) only reach the container log once the buffer fills.
+      - PYTHONUNBUFFERED=1
       - ORX_PSK=${ORX_PSK}
       - ORX_BASE=${ORX_BASE}
     labels:
