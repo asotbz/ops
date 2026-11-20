@@ -27,7 +27,8 @@ services:
       # still draining its in-flight deploys, so two deployers race and leave <id>_name containers.
       SELF_UPDATE_STRATEGY: applier
       # REST API (hops reaches it at doco-cd:80, hosts.yaml); no Traefik route, x-api-key required.
-      API_SECRET_FILE: /run/secrets/api_secret
+      # The key may only recreate Services and read runs, all hops needs.
+      API_KEYS_FILE: /run/secrets/api_keys
       SOPS_AGE_KEY_FILE: /run/secrets/sops_age_key
       APPRISE_API_URL: http://apprise:8000/notify
       APPRISE_NOTIFY_LEVEL: success
@@ -48,7 +49,7 @@ services:
     secrets:
       - sops_age_key
       - apprise_urls
-      - api_secret
+      - api_keys
     networks:
       - default
       # Prometheus scrapes doco_cd_* metrics on :9120; hops reaches the API here.
@@ -80,5 +81,7 @@ secrets:
     file: /etc/doco-cd/age.key
   apprise_urls:
     file: ./apprise_urls.sops.txt
-  api_secret:
-    file: ./api_secret.sops.txt
+  # The API_KEYS_FILE list, SOPS binary since SOPS can't encrypt a top-level YAML list. It holds the
+  # key in api_secret.sops.txt (which hops reads, hosts.yaml): rotate both together.
+  api_keys:
+    file: ./api_keys.sops.txt
