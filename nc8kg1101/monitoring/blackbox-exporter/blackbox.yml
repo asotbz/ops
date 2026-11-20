@@ -32,7 +32,7 @@ modules:
         username: prometheus
         password_file: /run/secrets/prometheus_password
 
-  # Denies anonymous requests by design (mitmproxy's web UI, openresty's `location /`): a 403 from
+  # Denies anonymous requests by design (openresty's `location /`): a 403 from
   # the Service itself means it is up; Traefik answers 502 or 404 when it is not.
   http_403:
     prober: http

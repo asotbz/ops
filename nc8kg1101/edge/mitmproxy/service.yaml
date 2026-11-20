@@ -10,22 +10,24 @@ services:
     image: mitmproxy/mitmproxy:12.2.3@sha256:00b77b5d8804c8ad18cb6caefbf9d5849e895e8986c5ce011f4ae30f4385962f
     container_name: mitmproxy
     # The image's mitmproxy user, which owns the data volume. Its entrypoint would usermod and gosu
-    # to that user, which needs root and capabilities, so start mitmweb directly instead.
+    # to that user, which needs root and capabilities, so start mitmdump directly instead.
     user: "1000:1000"
-    entrypoint: ["mitmweb"]
-    command: --web-host 0.0.0.0 --set web_password=${MITMPROXY_WEB_PASSWORD} -s /addons/rewrite_xml.py
+    # mitmdump, not mitmweb: mitmweb's web UI keeps every flow, bodies included, in memory, so it grew
+    # without bound until the limit restarted it. mitmdump keeps none.
+    entrypoint: ["mitmdump"]
+    # flow_detail=0: indexer URLs carry API keys, so no flow reaches the logs.
+    command: --set flow_detail=0 -s /addons/rewrite_xml.py
     deploy:
       resources:
         limits:
-          # 2.4G working set at cutover: mitmweb keeps every flow in memory, so it grows until a
-          # restart. The limit restarts it before it takes the Host.
-          memory: 4G
+          # mitmdump levelled off near 180M under repeated bursts in a local test.
+          memory: 1G
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
     healthcheck:
-      test: ["CMD", "python3", "-c", "import socket; [socket.create_connection(('127.0.0.1', p), 3) for p in (8080, 8081)]"]
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('127.0.0.1', 8080), 3)"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -41,35 +43,12 @@ services:
       startup-order: "0"
       stack-back.volumes: true
       stack-back.volumes.include: "mitmproxy_data"
-
-      traefik.enable: true
-
-      # Listen on http, but redirect all requests to https
-      traefik.http.routers.mitmproxy-http.rule: Host(`mmp.${DOMAIN}`)
-      traefik.http.routers.mitmproxy-http.entrypoints: http
-      traefik.http.routers.mitmproxy-http.middlewares: redirect-https
-
-      # Direct all https requests to the service
-      traefik.http.routers.mitmproxy-https.rule: Host(`mmp.${DOMAIN}`)
-      traefik.http.routers.mitmproxy-https.entrypoints: https
-      traefik.http.routers.mitmproxy-https.tls: true
-      traefik.http.routers.mitmproxy-https.tls.certresolver: ${CERT_RESOLVER}
-      traefik.http.routers.mitmproxy-https.service: mitmproxy
-      traefik.http.routers.mitmproxy-https.middlewares: crowdsec-bouncer
-
-      # Probe (GLOSSARY.md): the public path a user takes; see monitoring/prometheus/prometheus.yml
-      probe.url: https://mmp.${DOMAIN}/
-      probe.module: http_403
-
-      traefik.http.services.mitmproxy.loadbalancer.server.port: 8081
     volumes:
       # Its CA, which prowlarr and nzbhydra2 trust: losing it breaks both until they trust a new one.
       - mitmproxy_data:/home/mitmproxy/.mitmproxy
       - ./addons:/addons:ro
     networks:
       - default
-      # Web UI (:8081) through Traefik
-      - proxy
       # The proxy port (:8080) for its clients
       - forward-proxy
 
