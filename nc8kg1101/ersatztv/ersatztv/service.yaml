@@ -16,7 +16,9 @@ services:
           # The Baseline's 1.5x until a 30-day peak exists to size it by.
           memory: 3200M
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8409/api/version"]
+      # The channel list: /api answers 401 without an X-Etv-Api-Key header, and any other unknown
+      # path returns the UI shell. Traefik routes no traffic to an ErsatzTV that isn't healthy.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8409/iptv/channels.m3u"]
       interval: 30s
       timeout: 5s
       retries: 3
