@@ -37,7 +37,7 @@ services:
     extends:
       file: ../../_baseline.yaml
       service: baseline
-    image: ghcr.io/dispatcharr/dispatcharr:0.33.0@sha256:96bc548978c68e684677da7895692eeeefb7f0b2edfa38311dac2b702c61d236
+    image: ghcr.io/dispatcharr/dispatcharr:0.34.1@sha256:3716ebb0aba133fe8b3d311505dc49966b7fddff742d9ab710ccd19d04658195
     container_name: dispatcharr
     # The all-in-one entrypoint starts as root: it owns /data to its user, then starts
     # Postgres, Redis, nginx, uwsgi and celery as its user. It needs these to do so, and KILL to stop
