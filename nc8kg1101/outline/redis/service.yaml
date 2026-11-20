@@ -7,7 +7,7 @@ services:
     extends:
       file: ../../_baseline.yaml
       service: baseline
-    image: redis:8.8.0-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
+    image: redis:8.10.3-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     container_name: outline-redis
     # The image's redis user; the entrypoint skips its chown + su-exec when not root, so no caps.
     user: "999:1000"
